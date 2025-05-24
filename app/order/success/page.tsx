@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import OrderSuccessPage from "./order-success-page"
 
 export const metadata: Metadata = {
@@ -7,5 +8,7 @@ export const metadata: Metadata = {
 }
 
 export default function Page() {
-  return <OrderSuccessPage />
+  return    <Suspense fallback={<div>Loading...</div>}>
+    <OrderSuccessPage />
+    </Suspense>
 }
