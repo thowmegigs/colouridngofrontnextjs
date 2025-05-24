@@ -1,0 +1,37 @@
+import type { Metadata } from "next"
+import CollectionPage from "./collection-page"
+
+type Props = {
+  params: {
+    slug: string
+  }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  // In a real app, fetch category data based on slug
+  const category = {
+    name: params.slug
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" "),
+    description: `Shop our collection of ${params.slug
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ")} products.`,
+  }
+
+  return {
+    title: category.name,
+    description: category.description,
+    openGraph: {
+      title: category.name,
+      description: category.description,
+    },
+  }
+}
+
+export default function Page({ params }: Props) {
+  const { slug } = params
+
+  return <CollectionPage slug={slug} />
+}

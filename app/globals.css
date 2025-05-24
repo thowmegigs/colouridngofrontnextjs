@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 0 80% 38%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 0 80% 38%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 80% 38%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 0 80% 38%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .container {
+    @apply px-4 mx-auto max-w-7xl;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold mb-6;
+  }
+
+  .minion-btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .minion-btn-outline {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+  }
+
+  .minion-tabs {
+    @apply flex border-b;
+  }
+
+  .minion-tab {
+    @apply px-4 py-2 -mb-px border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary;
+  }
+
+  .minion-drawer {
+    @apply fixed inset-0 z-40 bg-black/40 backdrop-blur-sm;
+  }
+
+  .minion-drawer-left {
+    @apply fixed inset-y-0 left-0 z-50 w-full max-w-xs bg-background shadow-lg transition-transform duration-300 ease-in-out sm:max-w-sm;
+  }
+
+  .minion-header {
+    @apply sticky top-0 z-40 w-full bg-background transition-all duration-200;
+  }
+
+  .minion-container {
+    @apply container mx-auto px-4;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile app styling */
+  .mobile-app {
+    @apply max-w-md mx-auto shadow-lg min-h-screen bg-gray-50;
+  }
+
+  .mobile-header {
+    @apply sticky top-0 z-40 bg-white shadow-sm p-4 flex items-center justify-between;
+  }
+
+  .mobile-content {
+    @apply p-4;
+  }
+
+  .mobile-footer {
+    @apply fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 p-2;
+  }
+
+  .mobile-nav-item {
+    @apply flex flex-col items-center justify-center text-xs font-medium;
+  }
+
+  .mobile-card {
+    @apply bg-white rounded-xl shadow-sm p-4 mb-4;
+  }
+
+  .mobile-button {
+    @apply w-full rounded-full py-3 font-medium text-center;
+  }
+}
+.image-container {
+  width: 100%;
+  height: 100%; /* Adjust to the desired height */
+  overflow: hidden;
+}
+
+.image-container img {
+  object-fit: cover;      /* Ensures the image covers the entire container */
+  object-position: center top; /* Keeps the center part visible and cuts the upper part */
+}

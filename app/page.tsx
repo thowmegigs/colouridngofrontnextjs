@@ -1,0 +1,39 @@
+// app/page.tsx
+import { fetchContentSections, fetchTopCategories, fetchTopSlider } from "@/lib/api"
+import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query"
+import BrandCarousel from "./components/brand-carousel"
+import HeroSlider from "./components/hero-slider"
+import HomePageContent from "./components/HomePageContent"
+
+export default async function Home() {
+  const queryClient = new QueryClient()
+  await queryClient.prefetchQuery({
+    queryKey: ["slider"],
+    queryFn: fetchTopSlider,
+  })
+
+  await queryClient.prefetchQuery({
+    queryKey: ["topCategories"],
+    queryFn: fetchTopCategories,
+  })
+  await queryClient.prefetchQuery({
+    queryKey: ["content_sections"],
+    queryFn: fetchContentSections,
+    staleTime: 0,                // Always consider data stale immediately
+    
+  })
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="space-y-2 pb-2 px-2">
+        <HeroSlider />
+
+
+        <HomePageContent />
+
+         
+          <BrandCarousel />
+       
+      </div>
+    </HydrationBoundary>
+  )
+}
