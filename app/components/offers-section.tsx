@@ -52,7 +52,7 @@ export default function OffersSection(data:any) {
   const coupons=data.data.coupons1;
   const couponColors = useMemo(() => {
     const result: Record<string, string> = {};
-    if(coupons){
+    if(coupons && Array.isArray(coupons)){
     coupons.forEach((coupon: any) => {
       const color = colors[Math.floor(Math.random() * colors.length)];
       result[coupon.id] = color;
@@ -72,7 +72,7 @@ export default function OffersSection(data:any) {
     className={`grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3`}
    
   >
-    {coupons.map((coupon: any) => {
+    {Array.isArray(coupons) && coupons.map((coupon: any) => {
       const randomColor = couponColors[coupon.id];
       return (
         <div

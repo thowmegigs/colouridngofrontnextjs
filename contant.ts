@@ -1,5 +1,5 @@
-export const api_url="http://localhost:5000/api"
-export const image_base_url="http://colourindogo.test"
+export const api_url="https://api.colourindigo.com/api"
+export const image_base_url="https://admin.colourindigo.com"
 
 
   

@@ -77,7 +77,7 @@ const FilterAccordionItem: React.FC<Props> = ({
                 onFocus={(e) => e.stopPropagation()}
               />
             )}
-            {filteredOptions.map((item, index) => (
+            {filteredOptions && Array.isArray(filteredOptions) && filteredOptions.map((item, index) => (
               <div key={index} className="flex items-center space-x-2">
                 <Checkbox
                   id={item.id}

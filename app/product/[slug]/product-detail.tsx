@@ -911,114 +911,16 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
                   {Object.entries(product.attributes).map(([key, values], index) => (
                     <tr key={index}>
                       <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">{key}</th>
-                      <td className="px-4 py-3 text-sm">{values.join(", ")}</td>
+                      <td className="px-4 py-3 text-sm">{Array.isArray(values) && values.join(", ")}</td>
                     </tr>
                   ))}
-                  {product.fabric && (
+                  {/* {product.fabric && (
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Fabric</th>
                       <td className="px-4 py-3 text-sm">{product.fabric}</td>
                     </tr>
-                  )}
-                  {product.fit && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Fit</th>
-                      <td className="px-4 py-3 text-sm">{product.fit}</td>
-                    </tr>
-                  )}
-
-                  {product.neck_type && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Neck Type</th>
-                      <td className="px-4 py-3 text-sm">{product.neck_type}</td>
-                    </tr>
-                  )}
-
-                  {product.sleeve_type && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">
-                        Sleeve Type
-                      </th>
-                      <td className="px-4 py-3 text-sm">{product.sleeve_type}</td>
-                    </tr>
-                  )}
-
-                  {product.pattern && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Pattern</th>
-                      <td className="px-4 py-3 text-sm">{product.pattern}</td>
-                    </tr>
-                  )}
-
-                  {product.occasion && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Occasion</th>
-                      <td className="px-4 py-3 text-sm">{product.occasion}</td>
-                    </tr>
-                  )}
-
-                  {product.length && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Length</th>
-                      <td className="px-4 py-3 text-sm">{product.length}</td>
-                    </tr>
-                  )}
-
-                  {product.waist_rise && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">
-                        Waist Rise
-                      </th>
-                      <td className="px-4 py-3 text-sm">{product.waist_rise}</td>
-                    </tr>
-                  )}
-
-                  {product.closure && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Closure</th>
-                      <td className="px-4 py-3 text-sm">{product.closure}</td>
-                    </tr>
-                  )}
-
-                  {product.hemline && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Hemline</th>
-                      <td className="px-4 py-3 text-sm">{product.hemline}</td>
-                    </tr>
-                  )}
-
-                  {product.wash_care && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Wash Care</th>
-                      <td className="px-4 py-3 text-sm">{product.wash_care}</td>
-                    </tr>
-                  )}
-
-                  {product.surface_style && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">
-                        Surface Style
-                      </th>
-                      <td className="px-4 py-3 text-sm">{product.surface_style}</td>
-                    </tr>
-                  )}
-
-                  {product.stretch && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">Stretch</th>
-                      <td className="px-4 py-3 text-sm">{product.stretch}</td>
-                    </tr>
-                  )}
-
-                  {product.transparency && (
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground w-1/3">
-                        Transparency
-                      </th>
-                      <td className="px-4 py-3 text-sm">{product.transparency}</td>
-                    </tr>
-                  )}
-                </tbody>
+                  )} */}
+                  </tbody>
               </table>
             </div>
           </TabsContent>

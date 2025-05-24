@@ -496,7 +496,7 @@ console.log('ppoo',options)
               </Select>
             </div>
           </div>
-dsvdvs
+
           {/* Active Filters */}
           {(Object.keys(filterParams).length > 0 ||
             (filterOptions.priceRange && (priceRange[0] > filterOptions.priceRange.min || priceRange[1] < filterOptions.priceRange.max))) && (

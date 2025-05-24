@@ -33,8 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function ProductPage({ params }: Props) {
-  const { slug } = params
+export default async function ProductPage({ params }: Props) {
+  const { slug } =await  params
 
   return (
     <div className="container py-8">

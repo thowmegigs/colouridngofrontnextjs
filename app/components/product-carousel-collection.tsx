@@ -80,7 +80,7 @@ const sub_title=section.section_subtitle;
           onMouseEnter={() => setAutoScroll(false)}
           onMouseLeave={() => setAutoScroll(true)}
         >
-          {products && products.map((product: any) => (
+          {products && Array.isArray(products)  && products.map((product: any) => (
             <div key={product.id} className={`${isHorizontal ? "w-[160px] sm:w-[250px] flex-shrink-0" : ""} group`}>
               <ProductCard {...product} />
             </div>
