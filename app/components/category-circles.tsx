@@ -1,125 +1,86 @@
 "use client"
 
-import { useRef, useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { useEffect, useRef } from "react"
+import { capitalize } from "../lib/utils"
+import SafeImage from "./SafeImage"
 
-const categories = [
-  {
-    id: 1,
-    name: "Fashion",
-    image: "/placeholder.svg?height=200&width=200",
-    link: "/category/fashion",
-  },
-  {
-    id: 2,
-    name: "Electronics",
-    image: "/placeholder.svg?height=200&width=200",
-    link: "/category/electronics",
-  },
-  {
-    id: 3,
-    name: "Home",
-    image: "/placeholder.svg?height=200&width=200",
-    link: "/category/home",
-  },
-  {
-    id: 4,
-    name: "Beauty",
-    image: "/placeholder.svg?height=200&width=200",
-    link: "/category/beauty",
-  },
-  {
-    id: 5,
-    name: "Sports",
-    image: "/placeholder.svg?height=200&width=200",
-    link: "/category/sports",
-  },
-  {
-    id: 6,
-    name: "Toys",
-    image: "/placeholder.svg?height=200&width=200",
-    link: "/category/toys",
-  },
-  {
-    id: 7,
-    name: "Books",
-    image: "/placeholder.svg?height=200&width=200",
-    link: "/category/books",
-  },
-  {
-    id: 8,
-    name: "Jewelry",
-    image: "/placeholder.svg?height=200&width=200",
-    link: "/category/jewelry",
-  },
-]
-
-export default function CategoryCircles() {
+export default function CategoryCircles({ categories }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const startAutoScroll = () => {
+    if (scrollIntervalRef.current) return // Prevent multiple intervals
+    scrollIntervalRef.current = setInterval(() => {
+      const scrollContainer = scrollRef.current
+      if (!scrollContainer) return
+
+      scrollContainer.scrollLeft += 1
+
+      if (scrollContainer.scrollLeft >= scrollContainer.scrollWidth - scrollContainer.clientWidth) {
+        scrollContainer.scrollLeft = 0
+      }
+    }, 30)
+  }
+
+  const stopAutoScroll = () => {
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current)
+      scrollIntervalRef.current = null
+    }
+  }
 
   useEffect(() => {
     const scrollContainer = scrollRef.current
     if (!scrollContainer) return
 
-    let scrollInterval: NodeJS.Timeout
-
-    const startAutoScroll = () => {
-      scrollInterval = setInterval(() => {
-        if (scrollContainer) {
-          scrollContainer.scrollLeft += 1
-
-          // Reset scroll position when reaching the end
-          if (scrollContainer.scrollLeft >= scrollContainer.scrollWidth - scrollContainer.clientWidth) {
-            scrollContainer.scrollLeft = 0
-          }
-        }
-      }, 30)
-    }
-
     startAutoScroll()
 
-    // Pause auto-scroll when user interacts
-    const handleInteraction = () => {
-      clearInterval(scrollInterval)
+    const handleUserInteraction = () => {
+      stopAutoScroll()
+      if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current)
     }
 
-    // Resume auto-scroll after user stops interacting
     const handleInteractionEnd = () => {
-      setTimeout(startAutoScroll, 3000)
+      resumeTimeoutRef.current = setTimeout(() => {
+        startAutoScroll()
+      }, 3000)
     }
 
-    scrollContainer.addEventListener("mousedown", handleInteraction)
-    scrollContainer.addEventListener("touchstart", handleInteraction)
-    scrollContainer.addEventListener("mouseup", handleInteractionEnd)
+    scrollContainer.addEventListener("touchstart", handleUserInteraction)
     scrollContainer.addEventListener("touchend", handleInteractionEnd)
+    scrollContainer.addEventListener("mousedown", handleUserInteraction)
+    scrollContainer.addEventListener("mouseup", handleInteractionEnd)
+    scrollContainer.addEventListener("scroll", handleUserInteraction)
 
     return () => {
-      clearInterval(scrollInterval)
-      if (scrollContainer) {
-        scrollContainer.removeEventListener("mousedown", handleInteraction)
-        scrollContainer.removeEventListener("touchstart", handleInteraction)
-        scrollContainer.removeEventListener("mouseup", handleInteractionEnd)
-        scrollContainer.removeEventListener("touchend", handleInteractionEnd)
-      }
+      stopAutoScroll()
+      if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current)
+
+      scrollContainer.removeEventListener("touchstart", handleUserInteraction)
+      scrollContainer.removeEventListener("touchend", handleInteractionEnd)
+      scrollContainer.removeEventListener("mousedown", handleUserInteraction)
+      scrollContainer.removeEventListener("mouseup", handleInteractionEnd)
+      scrollContainer.removeEventListener("scroll", handleUserInteraction)
     }
   }, [])
 
   return (
     <div ref={scrollRef} className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
       {categories.map((category) => (
-        <Link key={category.id} href={category.link} className="flex-shrink-0 snap-center">
+        <Link key={category.id} href={`/category/${category.slug}`} className="flex-shrink-0 snap-center">
           <div className="flex flex-col items-center">
-            <div className="w-20 h-20 rounded-full overflow-hidden border border-border hover:border-primary transition-colors">
-              <Image
-                src={category.image || "/placeholder.svg"}
+            <div className="w-20 h-20 md:w-50 md:h-50 rounded-full overflow-hidden border border-border hover:border-primary transition-colors">
+              <SafeImage
+                src={category.image}
                 alt={category.name}
                 width={80}
                 height={80}
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-xs font-medium text-center mt-2">{category.name}</span>
+            <span className="text-xs font-medium text-center mt-2">{capitalize(category.name)}</span>
           </div>
         </Link>
       ))}

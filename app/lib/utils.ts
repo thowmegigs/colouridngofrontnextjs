@@ -1,6 +1,27 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-
+export   function  getStatusColor(status: string)  {
+    if (status.includes("Requested")) return "bg-red-700 text-white"
+    if (status.includes("Approved")) return "bg-green-500 text-white"
+    if (status.includes("Processing")) return "bg-purple-100 text-purple-800"
+    if (status.includes("Completed")) return "bg-green-100 text-green-800"
+    if (status.includes("Cancelled")) return "bg-red-100 text-red-800"
+    if (status.includes("Rejected")) return "bg-red-100 text-red-800"
+    return "bg-gray-100 text-gray-800"
+  }
+  export function  getRefundStatusColor(status: string){
+    switch (status) {
+      case "Pending":
+        return "bg-yellow-100 text-yellow-800"
+      case "Paid":
+        return "bg-green-100 text-green-800"
+      case "Cancelled":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+ 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -50,3 +71,6 @@ export function formatDate(dateString: string): string {
   }).format(date)
 }
 
+export function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}

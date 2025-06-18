@@ -1,4 +1,3 @@
-import { Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const CustomVideoPlayer = ({ src }: { src: string }) => {
@@ -59,13 +58,13 @@ const CustomVideoPlayer = ({ src }: { src: string }) => {
   };
 
   return (
-    <div className="relative w-full bg-black rounded-xl overflow-hidden shadow-lg">
-      <video
+    <div className="relative w-full rounded-xl overflow-hidden ">
+      <video autoPlay muted playsInline loop
         ref={videoRef}
-        src={src}
-        className="w-full h-auto"
+        src={src} 
+        className="w-full md:w-auto object-cover md:object-cover rounded-xl h-full"
       />
-      <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/70 to-transparent text-white p-3">
+      {/* <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/70 to-transparent text-white p-3">
         <div className="flex items-center justify-between mb-2">
           <button
             onClick={togglePlay}
@@ -81,7 +80,7 @@ const CustomVideoPlayer = ({ src }: { src: string }) => {
             style={{ width: `${progress}%` }}
           />
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

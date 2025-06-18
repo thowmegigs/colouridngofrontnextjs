@@ -78,7 +78,7 @@ export default function ProductCarousel({ section }: ProductCarouselProps) {
 
       <div
         ref={scrollRef}
-        className={`relative overflow-hidden ${isHorizontal ? "flex gap-4 pb-4 overflow-x-auto scrollbar-hide" : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"}`}
+        className={`relative overflow-hidden ${isHorizontal ? "flex gap-0 md:gap-1 pb-4 overflow-x-auto scrollbar-hide" : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-0 md:gap-1"}`}
         onMouseEnter={() => setAutoScroll(false)}
         onMouseLeave={() => setAutoScroll(true)}
       >
@@ -111,26 +111,7 @@ export default function ProductCarousel({ section }: ProductCarouselProps) {
         </div>
       )}
 
-      {!isHorizontal && (
-        <div className="flex justify-center mt-6 gap-1">
-          {Array.from({ length: Math.ceil(products.length / visibleItems) }).map((_, index) => (
-            <button
-              key={index}
-              className={`w-2 h-2 rounded-full transition-all ${index === Math.floor(currentIndex / visibleItems) ? "bg-primary w-6" : "bg-gray-300"
-                }`}
-              onClick={() => {
-                setCurrentIndex(index * visibleItems)
-                if (scrollRef.current) {
-                  scrollRef.current.scrollTo({
-                    left: index * scrollRef.current.clientWidth,
-                    behavior: "smooth",
-                  })
-                }
-              }}
-            />
-          ))}
-        </div>
-      )}
+     
     </div>
   )
 }

@@ -3,22 +3,28 @@
 import { applyCoupon as apiApplyCoupon, removeCoupon as apiRemoveCoupon, validateCoupon, type Coupon } from "@/lib/api"
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
+import { showToast } from "../components/show-toast"
 
 export type CartItem = {
-  id: string
+  id: number
   name: string
+  slug: string
   price: number
   sale_price: number
   image: string
   quantity: number
   stock: number
+  maxQuantityAllowed: number
   size?: string
   color?: string
-  vendorId: string|undefined
-  vendorName: string|undefined
+  vendorId?: number
+  vendorName?: string | undefined
   discountMessage?: string,
-  variantId?: number, discount?: number,
-  maxQuantityAllowed: number
+  variantId?: number,
+  discount?: number,
+  deliverable?:boolean,
+  isReturnable?:boolean
+
 }
 
 type CouponState = {
@@ -29,16 +35,18 @@ type CouponState = {
 
 type CartContextType = {
   items: CartItem[]
-  addItem: (item: CartItem) => void
-  removeItem: (id: string,variantId?:any) => void
-  updateQuantity: (id: string, quantity: number,variantId?:string) => void
+  addItem: (item: CartItem) => boolean
+  removeItem: (id: number, variantId?: number) => void
+  updateQuantity: (id: number, quantity: number, variantId?: number) => void
+  updateitemDeliverablilty: (id: number, deliverable: boolean) => void
   clearCart: () => void
   isOpen: boolean
   setIsOpen: (isOpen: boolean) => void
   totalItems: number
   subtotal: number
   discount: number
-  total: number
+  total: number,
+  shipping_cost: number,
   appliedCoupon: CouponState | null
   applyCoupon: (code: string) => Promise<{ success: boolean; message: string }>
   removeCoupon: () => Promise<{ success: boolean; message: string }>
@@ -95,9 +103,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [appliedCoupon])
 
   const addItem = (item: CartItem) => {
-   
+    let success = true;
     setItems((prevItems: any) => {
-      const existingItem: CartItem = prevItems.find((i) => i.variantId ? (i.id === item.id && i.variantId && i.variantId) : i.id === item.id)
+      const existingItem: CartItem = prevItems.find((i) => i.variantId ? (i.variantId === item.variantId && (i.id === item.id)) : i.id === item.id)
 
       if (existingItem) {
         const total = existingItem.quantity + item.quantity
@@ -106,10 +114,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           const adableQty = item.stock - existingItem.quantity
 
           item.quantity = (existingItem.quantity as number) + adableQty > item.maxQuantityAllowed ? (item.maxQuantityAllowed - existingItem.quantity) : adableQty
-         alert(`Can not add more than ${Math.min(item.maxQuantityAllowed,item.stock)} quantity of this product`)
+          showToast({description:`Can not add more than ${Math.min(item.maxQuantityAllowed, item.stock)} quantity of this product`,variant:'destructive'})
+          success = false
+          return prevItems
         }
-        return prevItems.map((i:any) =>
-          (i.variantId ? (i.id === item.id && i.variantId && i.variantId) : i.id === item.id)
+        return prevItems.map((i: any) =>
+          (i.variantId ? (i.id === item.id && i.variantId === item.variantId) : i.id === item.id)
             ? { ...i, quantity: i.quantity + item.quantity }
             : i,
         )
@@ -122,11 +132,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (appliedCoupon) {
       revalidateCoupon(appliedCoupon.code)
     }
+    return success
   }
 
-  const removeItem = (id: string,variantId?:string) => {
-    
-    setItems((prevItems) => prevItems.filter((item:any) =>item.variantId ? (item.id != id && item.variantId != variantId) : item.id != id))
+  const removeItem = (id: number, variantId?: number) => {
+
+    setItems((prevItems) => prevItems.filter((item: any) => item.variantId ? (item.variantId !== variantId) : (item.id !== id))
+    )
 
     // If a coupon is applied, revalidate it with the updated cart items
     if (appliedCoupon) {
@@ -134,10 +146,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const updateQuantity = (id: string, quantity: number, variantId?: string) => {
+  const updateQuantity = (id: number, quantity: number, variantId?: number) => {
 
     setItems((prevItems: any) => {
-      const existingItem: CartItem = prevItems.find((i: any) => i.variantId ? (i.id === id && i.variantId == variantId) : i.id === id);
+      const existingItem: CartItem = prevItems.find((i: any) => i.variantId ? (i.variantId === variantId && i.id === id) : i.id === id);
 
       if (existingItem) {
 
@@ -145,8 +157,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           const adableQty = existingItem.stock > existingItem.maxQuantityAllowed ? existingItem.maxQuantityAllowed : existingItem.stock;
 
           quantity = adableQty
-          alert(`Can not add more than ${Math.min(existingItem.maxQuantityAllowed,existingItem.stock)} quantity of this product`)
-
+          showToast({description:`Can not add more than ${Math.min(existingItem.maxQuantityAllowed, existingItem.stock)} quantity of this product`,variant:'destructive'})
+           return 
 
         }
         return prevItems.map((i: any) =>
@@ -163,6 +175,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (appliedCoupon) {
       revalidateCoupon(appliedCoupon.code)
     }
+  }
+  const updateitemDeliverablilty = (id: number,deliverable: boolean) => {
+
+    setItems((prevItems: any) => {
+      const existingItem: CartItem = prevItems.find((i: any) => i.id === id);
+
+      if (existingItem) {
+       return prevItems.map((i: any) =>
+          ( i.id === id)
+            ? { ...i, deliverable: deliverable }
+            : i,
+        )
+      }
+      return [...prevItems]
+
+    })
+
   }
 
   const clearCart = () => {
@@ -200,10 +229,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCouponLoading(true)
 
     try {
-      const response:any = await apiApplyCoupon(code, items)
- 
-      if (response.statusText==='OK') {
-        
+      const response: any = await apiApplyCoupon(code, items)
+
+      if (response.statusText === 'OK') {
+
         setAppliedCoupon({
           code,
           discountAmount: response.data.data.discount,
@@ -256,11 +285,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const totalItems = items.length
+  const subtotal = items.reduce((sum, item) => sum + item.sale_price * item.quantity, 0)
   const discount = appliedCoupon ? appliedCoupon.discountAmount : 0
   const total = subtotal - discount
-
+ const shipping_cost=total>500?0.0:99.00;
+//const shipping_cost=0;
   return (
     <CartContext.Provider
       value={{
@@ -274,12 +304,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         totalItems,
         subtotal,
         discount,
-        total,
+        total,shipping_cost,
         appliedCoupon,
         applyCoupon,
         removeCoupon,
         isCouponLoading,
-        couponError,
+        couponError,updateitemDeliverablilty
       }}
     >
       {children}

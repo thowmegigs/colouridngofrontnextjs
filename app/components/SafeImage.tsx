@@ -1,22 +1,41 @@
 'use client';
 
-import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import clsx from 'clsx';
+import Image, { ImageProps } from 'next/image';
+import { useState } from 'react';
 
-export default function SafeImage({ src, alt, ...props }) {
-  const [valid, setValid] = useState(false);
+type ShimmerImageProps = ImageProps & {
+  fallbackSrc?: string;
+};
 
-  useEffect(() => {
-    if (!src) return;
+const SafeImage = ({
+  src,
+  alt,
+  fallbackSrc = '/placeholder.png',
+  className = '',
+  ...props
+}: ShimmerImageProps) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-    fetch(src, { method: 'HEAD' })
-      .then((res) => setValid(res.ok))
-      .catch(() => setValid(false));
-  }, [src]);
+  return (
+    <Image
+      src={error ? fallbackSrc : src}
+      alt={alt}
+      onLoad={() => setLoading(false)}
+      onError={() => {
+        setLoading(false);
+        setError(true);
+      }}
+      className={clsx(
+        'transition-opacity duration-300',
+        loading && 'bg-gray-200 ',
+        !loading && 'opacity-100',
+        className
+      )}
+      {...props}
+    />
+  );
+};
 
-  if (!valid) {
-    return <Image src={'/cat.png'} alt={alt} {...props} />; // Or fallback <Image />
-  }
-
-  return <Image src={src} alt={alt} {...props} />;
-}
+export default SafeImage;

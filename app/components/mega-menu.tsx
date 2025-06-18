@@ -2,7 +2,7 @@
 
 import { Category } from "@/interfaces"
 import Link from "next/link"
-import { useLayoutEffect, useState } from "react"
+import { useLayoutEffect, useMemo, useState } from "react"
 
 type MegaMenuProps = {
   categories: Category[]
@@ -12,85 +12,83 @@ type MegaMenuProps = {
 }
 
 export default function MegaMenu({ categories, slug, onClose, className = "" }: MegaMenuProps) {
-  const [balancedColumns, setBalancedColumns] = useState<any[]>([])
-const [width,setWidth]=useState<any>(200)
+  const [width, setWidth] = useState(200)
   const menuCategory = categories.find((cat) => cat.slug === slug)
 
   if (!menuCategory) return null
 
-  const { name, children } = menuCategory
+  const maxMenuHeight = 600 // px
+  const rowHeight = 40 // px
+  const maxRows = Math.floor(maxMenuHeight / rowHeight)
+  const perColumnWidth = 250
 
-  const maxMenuHeight = 600; // px
-  const rowHeight = 40; // px
-  const maxRows = Math.floor(maxMenuHeight / rowHeight);
-  
-let columns = [];
-let currentColumn = [];
-let currentHeight = 0;
-let perColumnWidth=200;
-for (const sub of menuCategory.children) {
-  const groupHeight = 1 + sub.children.length;
+  // ✅ Use useMemo to compute columns only when category children change
+  const columns = useMemo(() => {
+    const result: any[] = []
+    let currentColumn: any[] = []
+    let currentHeight = 0
 
-  if (currentHeight + groupHeight > maxRows) {
-    columns.push(currentColumn);
-    currentColumn = [];
-    currentHeight = 0;
-  }
+    for (const sub of menuCategory.children) {
+      const groupHeight = 1 + sub.children.length
 
-  currentColumn.push(sub);
-  currentHeight += groupHeight;
-}
+      if (currentHeight + groupHeight > maxRows) {
+        result.push(currentColumn)
+        currentColumn = []
+        currentHeight = 0
+      }
 
-if (currentColumn.length > 0) {
-  columns.push(currentColumn);
-}
-useLayoutEffect(() => {
-  setWidth(perColumnWidth*(columns.length)) // Re-render now that you know the real height
-}, [perColumnWidth,columns]);
+      currentColumn.push(sub)
+      currentHeight += groupHeight
+    }
 
+    if (currentColumn.length > 0) {
+      result.push(currentColumn)
+    }
+
+    return result
+  }, [menuCategory.children])
+
+  // ✅ Set width based on computed columns
+  useLayoutEffect(() => {
+    setWidth(perColumnWidth * columns.length)
+  }, [columns.length])
+ 
   return (
-    <div 
-      className={`absolute  bg-background border-t border-b shadow-lg z-50 ${className}`}
+    <div
+      className={`absolute bg-background border-t border-b shadow-lg z-50 md:min-w-[1000px] ${className}`}
       onMouseLeave={onClose}
-      style={{ maxHeight: maxMenuHeight, overflowY: 'auto',left:120,width }} // Fixed height
+      style={{ maxHeight: maxMenuHeight, overflowY: "auto", left: 120 }}
     >
       <div className="container py-6">
-        <div className="grid grid-cols-1">
-        
-            {columns.map((column, columnIndex) => (
-              <div key={columnIndex} className="menu-column" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <div >
-                  {column.map((subcat: any, index: number) => (
-                   <ul key={index}> 
-                    <li key={index}>
-                        <Link style={{fontSize:13}}
-                          href={`/category/${subcat.slug}`}
-                          className="text-sm hover:text-primary"
-                          onClick={onClose}
-                        >
-                        <span className="text-primary"> {subcat.name}</span>
-                        </Link>
-                        </li>
-                      {
-                       subcat.children.length>0 && subcat.children.map((child:any)=>{
-                       return   <li key={child.id}> <Link
-                          href={`/category/${child.slug}`}
-                          className="text-sm hover:text-primary space-y-1"
-                          onClick={onClose} style={{fontSize:13}}
-                        >
-                         &nbsp; {child.name}
-                        </Link> </li>
-                        })
-                      
-                       
-                      }
-                      </ul>
-                   
+        <div className="flex gap-8">
+          {columns.map((column, columnIndex) => (
+            <div key={columnIndex} className="menu-column" style={{ height: "100%", flex: "1" }}>
+              {column.map((subcat: any) => (
+                <ul key={subcat.id} className="mb-4">
+                  <li>
+                    <Link
+                      href={`/category/${subcat.slug}`}
+                      className="text-2sm font-medium text-primary hover:underline"
+                      onClick={onClose}
+                    >
+                      {subcat.name}
+                    </Link>
+                  </li>
+                  {subcat.children.map((child: any) => (
+                    <li key={child.id}>
+                      <Link
+                        href={`/category/${child.slug}`}
+                        className="text-sm  hover:text-primary"
+                        onClick={onClose}
+                      >
+                        &nbsp;&nbsp;{child.name}
+                      </Link>
+                    </li>
                   ))}
-                </div>
-              </div>
-            ))}
-         
+                </ul>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     </div>

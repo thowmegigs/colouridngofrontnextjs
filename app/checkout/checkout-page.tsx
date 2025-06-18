@@ -11,10 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  checkPincodeAvailability,
   createOrder,
   deleteAddress,
   encryptId,
@@ -25,42 +22,41 @@ import {
   type Address,
   type OrderRequest,
   type PaymentMethod,
-  type PincodeAvailabilityResponse,
+  type PincodeAvailabilityResponse
 } from "@/lib/api"
 import { capitalizeWords } from "@/lib/utils"
 import {
   Check,
   ChevronRight,
-  Clock,
   CreditCard,
   CreditCardIcon,
-  DollarSign,
   Edit2,
   Home,
   Loader2,
-  MapPin,
   Plus,
   Shield,
   ShoppingBag,
   Ticket,
   Truck,
-  X,
+  X
 } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useMobile } from "../../hooks/use-mobile"
 
-import { api_url } from "@/contant"
+import { api_url, image_base_url } from "@/contant"
 import axios from "axios"
 import RazorpayPayment from "../components/razorpay-payment"
+import SafeImage from "../components/SafeImage"
+import { showToast } from "../components/show-toast"
 import { formatCurrency } from "../lib/utils"
+import { useAuth } from "../providers/auth-provider"
 import { useCart } from "../providers/cart-provider"
-import { useToast } from "../providers/ToastProvider"
+
 
 export default function CheckoutPage() {
-  const { items, subtotal, discount, total, clearCart, appliedCoupon, applyCoupon, removeCoupon } = useCart()
+  const { items, subtotal, discount, total,  clearCart,shipping_cost, appliedCoupon, applyCoupon, removeCoupon } = useCart()
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("razorpay")
   const [pincode, setPincode] = useState("")
   const [pincodeAvailability, setPincodeAvailability] = useState<PincodeAvailabilityResponse | null>(null)
@@ -75,14 +71,17 @@ export default function CheckoutPage() {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false)
   const [addresses, setAddresses] = useState<Address[]>([])
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true)
+ 
   const [deliveryNotes, setDeliveryNotes] = useState("")
   const [states, setStates] = useState<any>([])
+  const [checkoutItems,setCheckoutItems]=useState([])
   const [selectedState, setSelectedState] = useState("")
   const [cities, setCities] = useState<any>([])
- 
+  const {user}=useAuth()
+  
   const [newAddress, setNewAddress] = useState<Partial<Address>>({
     name: "",
-    phone_number: "",
+    phone_number: "", 
     address1: "",
     address2: "",
     city_id: "",
@@ -104,7 +103,6 @@ export default function CheckoutPage() {
   const [couponError, setCouponError] = useState<string | null>(null)
 
   const isMobile = useMobile()
-  const { showToast: toast } = useToast()
   const router = useRouter()
 
   // Check if user is logged in
@@ -122,10 +120,10 @@ export default function CheckoutPage() {
     const isUserLoggedIn = !!userToken || loggedInFlag === "true"
     setIsLoggedIn(isUserLoggedIn)
 
-    if (!isUserLoggedIn) {
-      router.push("/checkout/auth")
-      return
-    }
+    // if (!isUserLoggedIn) {
+    //   router.push("/checkout/auth")
+    //   return
+    // }
 
     // Get user data
     const userName = localStorage.getItem("userName") || ""
@@ -156,13 +154,28 @@ export default function CheckoutPage() {
   useEffect(() => {
     const getCitis = async () => {
       const resp = await fetchCities(selectedState as any)
-      console.log("got cir", resp)
+   
       setCities(resp)
     }
     if (selectedState) {
       getCitis()
     }
   }, [selectedState])
+useEffect(()=>{
+  if(items){
+    const mod=items.map((item)=>({...item,deliverable:true}))
+    setCheckoutItems(mod)
+  }
+},[items])
+
+ const handlePaymentMethodSelect= useCallback(
+    (method) => () => {
+    
+      setPaymentMethod(method);
+    },
+    [] // no dependencies because `setPaymentMethod` is stable
+  );
+
 
   const loadAddresses = async () => {
     setIsLoadingAddresses(true)
@@ -179,14 +192,14 @@ export default function CheckoutPage() {
         (addr: any) => addr.address_for === "Shipping" && addr.is_default == "Yes",
       )
       const defaultBilling = userAddresses.data.addresses.find(
-        (addr:any) => addr.address_for === "Billing" && addr.is_default == "Yes",
+        (addr: any) => addr.address_for === "Billing" && addr.is_default == "Yes",
       )
 
       if (defaultShipping) {
         setSelectedAddress(defaultShipping.id)
         setPincode(defaultShipping.pincode)
       } else if (userAddresses.data.addresses.length > 0) {
-        const firstShipping = userAddresses.data.addresses.find((addr:any) => addr.address_for === "Shipping")
+        const firstShipping = userAddresses.data.addresses.find((addr: any) => addr.address_for === "Shipping")
         if (firstShipping) {
           setSelectedAddress(firstShipping.id)
           setPincode(firstShipping.pincode)
@@ -197,8 +210,10 @@ export default function CheckoutPage() {
         setSelectedBillingAddress(defaultBilling.id)
       }
     } catch (error) {
-      console.error("Error loading addresses:", error)
-      toast("Error", "Failed to load your saved addresses.")
+
+      showToast({
+        title: "Error", description: "Failed to load your saved addresses."
+      })
     } finally {
       setIsLoadingAddresses(false)
     }
@@ -220,34 +235,20 @@ export default function CheckoutPage() {
     )
   }
 
-  const handleCheckPincode = async () => {
-    if (!pincode.trim()) return
 
-    setCheckingPincode(true)
-    try {
-      const response = await checkPincodeAvailability(pincode)
-      setPincodeAvailability(response)
-    } catch (error) {
-      console.error("Error checking pincode:", error)
-      setPincodeAvailability({
-        available: false,
-        message: "Error checking pincode availability. Please try again.",
-      })
-    } finally {
-      setCheckingPincode(false)
-    }
-  }
 
   const handleContinueToDelivery = () => {
     if (!selectedAddress) {
-      toast("Address Required", "Please select or add a shipping address to continue.")
+      showToast({  description: "Please select or add a shipping address to continue." ,variant:"destructive"})
       return
     }
 
     if (useSameAddress) {
       setSelectedBillingAddress(selectedAddress)
     } else if (!selectedBillingAddress) {
-      toast("Billing Address Required", "Please select or add a billing address to continue.")
+      showToast({
+        title: "Billing Address Required", description: "Please select or add a billing address to continue."
+      ,variant:"destructive"})
       return
     }
 
@@ -282,20 +283,22 @@ export default function CheckoutPage() {
       !newAddress.state_id ||
       !newAddress.pincode
     ) {
-      toast("Incomplete Address", "Please fill in all required fields.")
+      showToast({
+        title: "Incomplete Address", description: "Please fill in all required fields."
+      ,variant:"destructive"})
       return
     }
 
     try {
       const addressToSave = {
         ...(newAddress as Address),
-        user_id: "1",
+       
         id: editingAddress?.id,
       }
 
       addressToSave.address_for = capitalizeWords(addressToSave.address_for) as any
 
-      const savedAddress = await saveAddress(addressToSave, true)
+      const savedAddress = await saveAddress(addressToSave, addressToSave.id?true:false)
 
       // Update addresses list
       await loadAddresses()
@@ -324,10 +327,14 @@ export default function CheckoutPage() {
         address_for: "Shipping",
       })
 
-      toast("Address Saved", "Your address has been saved successfully.")
+      // showToast({
+      //   title: "Address Saved", description: "Your address has been saved successfully."
+      // })
     } catch (error) {
       console.error("Error saving address:", error)
-      toast("Error", "Failed to save your address. Please try again.")
+      showToast({
+        title: "Error", description: "Failed to save your address. Please try again."
+      ,variant:"destructive"})
     }
   }
 
@@ -338,17 +345,21 @@ export default function CheckoutPage() {
       // Update addresses list
       await loadAddresses()
 
-      toast("Address Deleted", "Your address has been deleted successfully.")
+      // showToast({
+      //   title: "Address Deleted", description: "Your address has been deleted successfully."
+      // })
     } catch (error) {
       console.error("Error deleting address:", error)
-      toast("Error", "Failed to delete your address. Please try again.")
+      showToast({
+        title: "Error", description: "Failed to delete your address. Please try again."
+      ,variant:"destructive"})
     }
   }
 
   const handleEditAddress = async (address: Address) => {
-    console.log("address", address)
+  
     const res = await fetchCities(address.state_id as any)
-    console.log("cities s", res)
+   
     setCities(res)
     setEditingAddress(address)
     setNewAddress({
@@ -368,24 +379,16 @@ export default function CheckoutPage() {
       city_id: "",
       state_id: "",
       pincode: "",
-      country: "India",
+    
       is_default: "No",
       address_for: type,
+      address_type:"Home"
     })
     setAddingNewAddress(true)
   }
 
-  const calculateShippingFee = () => {
-    switch (deliveryOption) {
-      case "express":
-        return 9.99
-      case "same-day":
-        return 19.99
-      default:
-        return 0
-    }
-  }
-
+  
+  
   // Handle coupon application
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -401,12 +404,14 @@ export default function CheckoutPage() {
 
       if (result.success) {
         setCouponCode("")
-        toast("Success", "Coupon applied successfully!")
+        showToast({
+          title: "Success", description: "Coupon applied successfully!"
+        })
       } else {
         setCouponError(result.message || "Invalid coupon code")
       }
     } catch (error) {
-      console.error("Error applying coupon:", error)
+     
       setCouponError("Failed to apply coupon. Please try again.")
     } finally {
       setIsApplyingCoupon(false)
@@ -416,20 +421,25 @@ export default function CheckoutPage() {
   // Handle coupon removal
   const handleRemoveCoupon = () => {
     removeCoupon()
-    toast("Coupon Removed", "Coupon has been removed from your order.")
+    showToast({
+      title: "Coupon Removed", description: "Coupon has been removed from your order."
+    })
   }
 
   const handlePlaceOrder = async () => {
     if (!selectedAddress || (!useSameAddress && !selectedBillingAddress)) {
-      toast("Address Required", "Please select both shipping and billing addresses.")
+      showToast({
+        title: "Address Required", description: "Please select both shipping and billing addresses.",
+        variant:"destructive"
+      })
       return
     }
+  
 
     setIsProcessingOrder(true)
 
     try {
-      const shippingFee = calculateShippingFee()
-
+    console.log('dfdfd')
       const orderItems = items.map((item) => ({
         product_id: item.id,
         variant_id: item.variantId as any,
@@ -438,9 +448,11 @@ export default function CheckoutPage() {
         sale_price: item.sale_price ?? 0.0,
         quantity: item.quantity,
         image: item.image,
+        vendor_id:item.vendorId,
+        size:item.size,color:item.color
       }))
 
-      // Prepare order data with coupon information if available
+    
       const orderData: OrderRequest = {
         items: orderItems,
         shipping_address_id: selectedAddress,
@@ -449,9 +461,11 @@ export default function CheckoutPage() {
         shipping_method: deliveryOption as any,
         delivery_instructions: deliveryNotes,
         subtotal,
-        shipping_cost: shippingFee,
+        shipping_cost,
         discount,
-        total: total + shippingFee,
+        total: total + shipping_cost,
+      
+       
       }
 
       // Add coupon information if a coupon is applied
@@ -463,7 +477,7 @@ export default function CheckoutPage() {
 
 
       const response = await createOrder(orderData)
-      console.log("res", response)
+     
       if (response.success) {
         if (paymentMethod === "razorpay" && response.payment_required && response.razorpay_order) {
           // Set order response for Razorpay payment
@@ -474,46 +488,59 @@ export default function CheckoutPage() {
             requiresPayment: true,
           })
         } else {
-          // COD or other payment method that doesn't require immediate payment
-          toast("Order Placed Successfully!", response.message)
+     
+          showToast({
+            title: "Order Placed Successfully!", description: response.message
+          })
 
           // Clear cart and coupon data
           clearCart()
           localStorage.removeItem("cartCoupon")
           const encryptedId = encryptId(response.order_id);
-          
+
           router.push(`/order/success?id=${encodeURIComponent(encryptedId)}`)
         }
       } else {
-        toast("Order Failed", response.message || "Failed to place your order. Please try again.")
+        showToast({
+          title: "Order Failed",
+          description: response.message || "Failed to place your order.Please try again.", variant: 'destructive'
+        })
       }
     } catch (error) {
-      console.error("Error placing order:", error)
-      toast("Order Failed", "An error occurred while placing your order. Please try again.")
+     
+      showToast({
+        title: "Order Failed", description: "An error occurred while placing your order. Please try again.", variant: 'destructive'
+      })
     } finally {
       setIsProcessingOrder(false)
     }
   }
 
-  const handlePaymentSuccess = async ({ amount, orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature }:any) => {
-   
+  const handlePaymentSuccess = async ({ amount, orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature }: any) => {
+
     try {
       // const { amount, orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature } = response;
-      console.log("after payment", orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature)
       // Send details to backend for verification
       const res = await axios.post(`${api_url}/orders/payment/verify`, {
         amount, orderId,
         razorpay_payment_id,
         razorpay_order_id,
         razorpay_signature,
-      });
+      },{
+    withCredentials:true
+  });
 
       if (res.data.success) {
         // Show success message or redirect to order summary
-        toast("Payment Successful!", "Your order has been placed successfully.")
+        showToast({
+          title: "Payment Successful!",
+          description: "Your order has been placed successfully."
+        })
         // Optionally navigate to thank you or order confirmation page
       } else {
-        toast("Error!", "Payment verification failed")
+        showToast({
+          title: "Error!", description: "Payment verification failed", variant: 'destructive'
+        })
 
       }
 
@@ -522,17 +549,19 @@ export default function CheckoutPage() {
       // Clear cart and coupon data
       clearCart()
       localStorage.removeItem("cartCoupon")
-        const encryptedId = encryptId(orderId);
-        router.push(`/order/success?id=${encodeURIComponent(encryptedId)}`)
-    
+      const encryptedId = encryptId(orderId);
+      router.push(`/order/success?id=${encodeURIComponent(encryptedId)}`)
+
     } catch (error) {
-      console.error('Payment success handling failed:', error);
       alert('Something went wrong while verifying the payment.');
     }
   }
 
   const handlePaymentFailure = (error: string) => {
-    toast("Payment Failed", error || "There was an issue with your payment. Please try again.")
+    showToast({
+      title: "Payment Failed",
+      description: error || "There was an issue with your payment. Please try again.", variant: 'destructive'
+    })
     setOrderResponse(null)
   }
 
@@ -541,16 +570,7 @@ export default function CheckoutPage() {
     return (
       <div className="pb-32">
         {/* Mobile Header */}
-        <div className="sticky top-0 z-10 bg-background border-b">
-          <div className="container py-4 flex items-center justify-between">
-            <Link href="/cart" className="flex items-center text-sm font-medium">
-              <ChevronRight className="h-4 w-4 mr-1 rotate-180" />
-              Back
-            </Link>
-            <h1 className="text-lg font-bold">Checkout</h1>
-            <div className="w-8"></div> {/* Spacer for alignment */}
-          </div>
-        </div>
+       
 
         {/* Progress Indicator */}
         <div className="container mt-4">
@@ -807,7 +827,7 @@ export default function CheckoutPage() {
                     <Label htmlFor="recipient">Full Name</Label>
                     <Input
                       id="recipient"
-                      placeholder="John Doe"
+                      placeholder="Enter full name"
                       value={newAddress.name}
                       onChange={(e) => handleAddressChange(e, "name")}
                     />
@@ -818,8 +838,8 @@ export default function CheckoutPage() {
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="+91 9876543210"
-                      value={newAddress.phone_number}
+                      placeholder="Enter phone number "
+                      value={user?.phone}
                       onChange={(e) => handleAddressChange(e, "phone_number")}
                     />
                   </div>
@@ -828,7 +848,7 @@ export default function CheckoutPage() {
                     <Label htmlFor="address">Address1</Label>
                     <Input
                       id="address"
-                      placeholder="123 Main St"
+                      placeholder="Enter house/street/flat No"
                       value={newAddress.address1}
                       onChange={(e) => handleAddressChange(e, "address1")}
                     />
@@ -837,25 +857,25 @@ export default function CheckoutPage() {
                     <Label htmlFor="address">Address2</Label>
                     <Input
                       id="address1"
-                      placeholder="123 Main St"
+                      placeholder="Enter area"
                       value={newAddress.address2}
                       onChange={(e) => handleAddressChange(e, "address2")}
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1  md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">State</Label>
                       <Select
                         value={newAddress.state_id}
                         onValueChange={(value) => {
-                          console.log("selected sta", value)
+                      
                           setSelectedState(value)
                           setNewAddress({ ...newAddress, state_id: value })
                         }}
                       >
                         <SelectTrigger id="state2">
-                          <SelectValue placeholder="Select State2" />
+                          <SelectValue placeholder="Select State" />
                         </SelectTrigger>
                         <SelectContent>
                           {states.length > 0 &&
@@ -868,7 +888,7 @@ export default function CheckoutPage() {
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City</Label>
                       <Select
@@ -892,7 +912,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="zip">PIN Code</Label>
                       <Input
@@ -938,93 +958,12 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Pincode Availability Checker */}
-              {!addingNewAddress && (
-                <div className="border rounded-lg p-4 bg-muted/20 mt-4">
-                  <h3 className="font-medium mb-3 flex items-center">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Check Delivery Availability
-                  </h3>
-
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Enter PIN Code"
-                        value={pincode}
-                        onChange={(e) => setPincode(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleCheckPincode()}
-                      />
-                    </div>
-                    <Button onClick={handleCheckPincode} disabled={checkingPincode}>
-                      {checkingPincode ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Checking
-                        </>
-                      ) : (
-                        "Check"
-                      )}
-                    </Button>
-                  </div>
-
-                  {pincodeAvailability && (
-                    <div
-                      className={`mt-3 p-3 rounded-md ${pincodeAvailability.available
-                        ? "bg-green-50 border border-green-100"
-                        : "bg-red-50 border border-red-100"
-                        }`}
-                    >
-                      <div className="flex items-start">
-                        {pincodeAvailability.available ? (
-                          <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <X className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                        )}
-                        <div>
-                          <p
-                            className={`font-medium ${pincodeAvailability.available ? "text-green-700" : "text-red-700"
-                              }`}
-                          >
-                            {pincodeAvailability.message}
-                          </p>
-
-                          {pincodeAvailability.available && (
-                            <div className="mt-2 space-y-2">
-                              <div className="flex items-center">
-                                <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                                <span className="text-sm">
-                                  Estimated delivery in {pincodeAvailability.estimated_delivery_days}
-                                  {pincodeAvailability.estimated_delivery_days === 1 ? " day" : " days"}
-                                </span>
-                              </div>
-
-                              <div className="flex flex-wrap gap-2">
-                                {pincodeAvailability.cod_available && (
-                                  <Badge variant="outline" className="bg-muted/50">
-                                    Cash on Delivery
-                                  </Badge>
-                                )}
-
-                                {pincodeAvailability.express_delivery_available && (
-                                  <Badge variant="outline" className="bg-muted/50">
-                                    <Truck className="h-3 w-3 mr-1" />
-                                    Express Delivery
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              
             </div>
           )}
 
           {/* Delivery Step */}
-          {activeStep === "delivery" && (
+          {/* {activeStep === "delivery" && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Delivery Options</h2>
 
@@ -1134,7 +1073,7 @@ export default function CheckoutPage() {
                   ))}
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Payment Step */}
           {activeStep === "payment" && (
@@ -1173,9 +1112,9 @@ export default function CheckoutPage() {
                       orderId={orderResponse.orderId}
                       razorpayOrderId={orderResponse.razorpayOrderId || ""}
                       amount={orderResponse.amount}
-                      name={"shashi"}
+                      name={user?.name || "Customer"}
                       // email={userData.email || ""}
-                      customerPhone='+918479960829'
+                      customerPhone={user?.phone}
                       onSuccess={handlePaymentSuccess}
                       onFailure={handlePaymentFailure}
                     />
@@ -1188,13 +1127,13 @@ export default function CheckoutPage() {
               ) : (
                 <RadioGroup
                   value={paymentMethod}
-                  onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
+                  onValueChange={(value) => handlePaymentMethodSelect(value as PaymentMethod)}
                   className="space-y-3"
                 >
                   <div
                     className={`border rounded-lg p-4 ${paymentMethod === "razorpay" ? "border-primary bg-primary/5" : ""
                       }`}
-                    onClick={() => setPaymentMethod("razorpay")}
+                    onClick={()=>setPaymentMethod("razorpay")}
                   >
                     <div className="flex items-start">
                       <RadioGroupItem value="razorpay" id="payment-razorpay" className="mt-1" />
@@ -1213,8 +1152,8 @@ export default function CheckoutPage() {
                           <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
                             MC
                           </div>
-                          <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                            AMEX
+                          <div className=" bg-muted rounded flex items-center justify-center text-xs font-medium">
+                            NET BANKING
                           </div>
                           <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
                             UPI
@@ -1226,14 +1165,14 @@ export default function CheckoutPage() {
 
                   <div
                     className={`border rounded-lg p-4 ${paymentMethod === "cod" ? "border-primary bg-primary/5" : ""}`}
-                    onClick={() => setPaymentMethod("cod")}
+                    onClick={()=>setPaymentMethod("cod")}
                   >
                     <div className="flex items-start">
                       <RadioGroupItem value="cod" id="payment-cod" className="mt-1" />
                       <div className="ml-3 flex-1">
                         <div className="flex justify-between">
                           <div className="flex items-center">
-                            <DollarSign className="h-5 w-5 mr-2" />
+                           
                             <span className="font-medium">Cash on Delivery</span>
                           </div>
                         </div>
@@ -1322,21 +1261,15 @@ export default function CheckoutPage() {
 
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span>
-                      {deliveryOption === "standard"
-                        ? "Free"
-                        : deliveryOption === "express"
-                          ? formatCurrency(9.99)
-                          : formatCurrency(19.99)}
+                   <span>
+                     {formatCurrency(shipping_cost)}
                     </span>
                   </div>
 
                   <div className="flex justify-between font-medium text-lg pt-2 border-t mt-2">
                     <span>Total</span>
                     <span>
-                      {formatCurrency(
-                        total + (deliveryOption === "express" ? 9.99 : deliveryOption === "same-day" ? 19.99 : 0),
-                      )}
+                      {formatCurrency(total+shipping_cost)}
                     </span>
                   </div>
                 </div>
@@ -1364,15 +1297,19 @@ export default function CheckoutPage() {
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <ul className="space-y-4">
-                  {items.map((item) => (
-                    <li key={item.id} className="flex">
+                  {checkoutItems.map((item) => (
+                    <li key={item.id} className="flex flex-col">
+                      <div  className="flex">
                       <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
-                        <Image
-                          src={item.image || "/placeholder.svg"}
+                        <SafeImage
+                          src={item.variantId
+                            ? `${image_base_url}/storage/products/${item.id}/variants/${item.image}`
+                            : `${image_base_url}/storage/products/${item.id}/${item.image}`
+                          }
                           alt={item.name}
                           width={64}
                           height={64}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-fit"
                         />
                       </div>
 
@@ -1385,9 +1322,11 @@ export default function CheckoutPage() {
                         </p>
                         <div className="flex justify-between mt-1">
                           <span className="text-xs">Qty: {item.quantity}</span>
-                          <span className="text-sm font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                          <span className="text-sm font-medium">{formatCurrency(item.sale_price * item.quantity)}</span>
                         </div>
                       </div>
+                      </div>
+                   
                     </li>
                   ))}
                 </ul>
@@ -1421,11 +1360,11 @@ export default function CheckoutPage() {
             <div className="flex flex-col space-y-2">
               <div className="flex justify-between text-sm mb-1">
                 <span>Total:</span>
-                <span className="font-bold">
-                  {formatCurrency(
-                    total + (deliveryOption === "express" ? 9.99 : deliveryOption === "same-day" ? 19.99 : 0),
-                  )}
-                </span>
+                 <span className="font-bold">
+                
+                      {formatCurrency(total+shipping_cost)}
+                    
+                    </span>
               </div>
               <Button className="w-full" size="lg" onClick={handleContinueToPayment}>
                 Continue to Payment
@@ -1438,10 +1377,10 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-sm mb-1">
                 <span>Total:</span>
                 <span className="font-bold">
-                  {formatCurrency(
-                    total + (deliveryOption === "express" ? 9.99 : deliveryOption === "same-day" ? 19.99 : 0),
-                  )}
-                </span>
+               
+                    
+                      {formatCurrency(total+shipping_cost)}
+                    </span>
               </div>
               <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={isProcessingOrder}>
                 {isProcessingOrder ? (
@@ -1829,194 +1768,12 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {/* Pincode Availability Checker */}
-                {!addingNewAddress && (
-                  <div className="border rounded-lg p-4 bg-muted/20 mt-6">
-                    <h3 className="font-medium mb-3 flex items-center">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Check Delivery Availability
-                    </h3>
-
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <Input
-                          placeholder="Enter PIN Code"
-                          value={pincode}
-                          onChange={(e) => setPincode(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleCheckPincode()}
-                        />
-                      </div>
-                      <Button onClick={handleCheckPincode} disabled={checkingPincode || !pincode}>
-                        {checkingPincode ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Checking
-                          </>
-                        ) : (
-                          "Check"
-                        )}
-                      </Button>
-                    </div>
-
-                    {pincodeAvailability && (
-                      <div
-                        className={`mt-3 p-3 rounded-md ${pincodeAvailability.available
-                          ? "bg-green-50 border border-green-100"
-                          : "bg-red-50 border border-red-100"
-                          }`}
-                      >
-                        <div className="flex items-start">
-                          {pincodeAvailability.available ? (
-                            <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                          ) : (
-                            <X className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                          )}
-                          <div>
-                            <p
-                              className={`font-medium ${pincodeAvailability.available ? "text-green-700" : "text-red-700"
-                                }`}
-                            >
-                              {pincodeAvailability.message}
-                            </p>
-
-                            {pincodeAvailability.available && (
-                              <div className="mt-2 space-y-2">
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                                  <span className="text-sm">
-                                    Estimated delivery in {pincodeAvailability.estimated_delivery_days}
-                                    {pincodeAvailability.estimated_delivery_days === 1 ? " day" : " days"}
-                                  </span>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                  {pincodeAvailability.cod_available && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge variant="outline" className="bg-muted/50">
-                                            Cash on Delivery
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Pay when you receive your order</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-
-                                  {pincodeAvailability.express_delivery_available && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge variant="outline" className="bg-muted/50">
-                                            <Truck className="h-3 w-3 mr-1" />
-                                            Express Delivery
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Faster delivery option available</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+               
               </CardContent>
             </Card>
 
             {/* Delivery Options */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-semibold flex items-center mb-4">
-                  <Truck className="h-5 w-5 mr-2" />
-                  Delivery Options
-                </h2>
-
-                <RadioGroup value={deliveryOption} onValueChange={setDeliveryOption} className="space-y-4">
-                  <div
-                    className={`border rounded-lg p-4 ${deliveryOption === "standard" ? "border-primary bg-primary/5" : ""
-                      }`}
-                  >
-                    <div className="flex items-start">
-                      <RadioGroupItem value="standard" id="standard-delivery" className="mt-1" />
-                      <div className="ml-3 flex-1">
-                        <div className="flex justify-between">
-                          <div>
-                            <Label htmlFor="standard-delivery" className="font-medium">
-                              Standard Delivery
-                            </Label>
-                            <p className="text-sm text-muted-foreground">Delivery in 3-5 business days</p>
-                          </div>
-                          <span className="font-medium">Free</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`border rounded-lg p-4 ${deliveryOption === "express" ? "border-primary bg-primary/5" : ""
-                      }`}
-                  >
-                    <div className="flex items-start">
-                      <RadioGroupItem value="express" id="express-delivery" className="mt-1" />
-                      <div className="ml-3 flex-1">
-                        <div className="flex justify-between">
-                          <div>
-                            <Label htmlFor="express-delivery" className="font-medium">
-                              Express Delivery
-                            </Label>
-                            <p className="text-sm text-muted-foreground">Delivery in 1-2 business days</p>
-                          </div>
-                          <span className="font-medium">{formatCurrency(9.99)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`border rounded-lg p-4 ${deliveryOption === "same-day" ? "border-primary bg-primary/5" : ""
-                      }`}
-                  >
-                    <div className="flex items-start">
-                      <RadioGroupItem value="same-day" id="same-day-delivery" className="mt-1" />
-                      <div className="ml-3 flex-1">
-                        <div className="flex justify-between">
-                          <div>
-                            <Label htmlFor="same-day-delivery" className="font-medium">
-                              Same Day Delivery
-                            </Label>
-                            <p className="text-sm text-muted-foreground">Order before 2 PM for delivery today</p>
-                            <Badge variant="outline" className="mt-2">
-                              Limited Availability
-                            </Badge>
-                          </div>
-                          <span className="font-medium">{formatCurrency(19.99)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </RadioGroup>
-
-                <div className="space-y-2 mt-6">
-                  <Label htmlFor="delivery-notes">Delivery Notes (Optional)</Label>
-                  <Textarea
-                    id="delivery-notes"
-                    placeholder="Add any special instructions for delivery"
-                    className="resize-none"
-                    value={deliveryNotes}
-                    onChange={(e) => setDeliveryNotes(e.target.value)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+      
 
             {/* Payment Method */}
             <Card>
@@ -2040,20 +1797,14 @@ export default function CheckoutPage() {
                       <div className="ml-3 flex-1">
                         <div className="flex justify-between">
                           <div className="flex items-center">
-                            <CreditCard className="h-5 w-5 mr-2" />
-                            <span className="font-medium">Credit / Debit Card</span>
+                            {/* <CreditCard className="h-5 w-5 mr-2" /> */}
+                            <span className="font-medium">Pay Online </span>
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">Pay securely with Razorpay</p>
                         <div className="flex items-center mt-2 space-x-2">
                           <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
                             VISA
-                          </div>
-                          <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                            MC
-                          </div>
-                          <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                            AMEX
                           </div>
                           <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
                             UPI
@@ -2071,7 +1822,7 @@ export default function CheckoutPage() {
                       <div className="ml-3 flex-1">
                         <div className="flex justify-between">
                           <div className="flex items-center">
-                            <DollarSign className="h-5 w-5 mr-2" />
+                            {/* <DollarSign className="h-5 w-5 mr-2" /> */}
                             <span className="font-medium">Cash on Delivery</span>
                           </div>
                         </div>
@@ -2165,32 +1916,38 @@ export default function CheckoutPage() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <ul className="space-y-4 mb-4">
-                        {items.map((item) => (
-                          <li key={item.id} className="flex">
-                            <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
-                              <Image
-                                src={item.image || "/placeholder.svg"}
-                                alt={item.name}
-                                width={64}
-                                height={64}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
+                        {checkoutItems.map((item) => (
+                          <li key={item.id} className="flex flex-col">
+                            <div className="flex">
+                              <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
+                                <SafeImage
+                                  src={item.variantId
+                                    ? `${image_base_url}/storage/products/${item.id}/variants/${item.image}`
+                                    : `${image_base_url}/storage/products/${item.id}/${item.image}`
+                                  }
+                                  alt={item.name}
+                                  width={64}
+                                  height={64}
+                                  className="w-full h-full object-fit"
+                                />
+                              </div>
 
-                            <div className="ml-4 flex-1">
-                              <h4 className="text-sm font-medium">{item.name}</h4>
-                              <p className="text-xs text-muted-foreground">
-                                {item.size && `Size: ${item.size}`}
-                                {item.size && item.color && " | "}
-                                {item.color && `Color: ${item.color}`}
-                              </p>
-                              <div className="flex justify-between mt-1">
-                                <span className="text-xs">Qty: {item.quantity}</span>
-                                <span className="text-sm font-medium">
-                                  {formatCurrency(item.price * item.quantity)}
-                                </span>
+                              <div className="ml-4 flex-1">
+                                <h4 className="text-sm font-medium">{item.name}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {item.size && `Size: ${item.size}`}
+                                  {item.size && item.color && " | "}
+                                  {item.color && `Color: ${item.color}`}
+                                </p>
+                                <div className="flex justify-between mt-1">
+                                  <span className="text-xs">Qty: {item.quantity}</span>
+                                  <span className="text-sm font-medium">
+                                    {formatCurrency(item.sale_price * item.quantity)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
+                          
                           </li>
                         ))}
                       </ul>
@@ -2227,20 +1984,15 @@ export default function CheckoutPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Shipping</span>
                     <span>
-                      {deliveryOption === "standard"
-                        ? "Free"
-                        : deliveryOption === "express"
-                          ? formatCurrency(9.99)
-                          : formatCurrency(19.99)}
+                     {formatCurrency(shipping_cost)}
                     </span>
                   </div>
 
                   <div className="flex justify-between font-medium text-lg pt-2">
                     <span>Total</span>
                     <span>
-                      {formatCurrency(
-                        total + (deliveryOption === "express" ? 9.99 : deliveryOption === "same-day" ? 19.99 : 0),
-                      )}
+                     
+                      {formatCurrency(total+shipping_cost)}
                     </span>
                   </div>
                 </div>

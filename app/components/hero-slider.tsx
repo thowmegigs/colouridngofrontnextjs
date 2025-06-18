@@ -3,9 +3,9 @@
 import { fetchTopSlider } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import SafeImage from "./SafeImage"
 import { SliderSkeleton } from "./skeleton"
 
 export default function HeroSlider() {
@@ -41,15 +41,15 @@ export default function HeroSlider() {
   }
 
   if (error) {
-    return <div>Error loading slider data</div>
+    return <SliderSkeleton />
   }
 
   if (!data?.length) {
-    return <div>No slides available</div>
+    return <SliderSkeleton />
   }
 
   return (
-    <div className="relative h-[180px] sm:h-[70vh] overflow-hidden">
+    <div className="relative h-[270px] sm:h-screen overflow-hidden rounded-sm  ">
       {data.map((slide:any, index) => (
         <div
           key={index}
@@ -59,14 +59,11 @@ export default function HeroSlider() {
         >
           <Link href="/category/summer-collection">
           <div className="relative w-full h-full">
-              <Image
+              <SafeImage
                 src={slide.image || "/placeholder.svg"}
                 alt={`Slide ${index + 1}`}
                 layout="fill"
-                objectFit="cover"
-                objectPosition="center top"
-                priority
-                 className="object-cover object-top"
+                
               />
             </div>
           </Link>
@@ -89,11 +86,11 @@ export default function HeroSlider() {
         <span className="sr-only">Next slide</span>
       </button>
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-2 rounded-full bg-white py-1 px-2">
         {data.map((_, index) => (
           <button
             key={index}
-            className={`w-2 h-2 rounded-full ${index === currentSlide ? "bg-white" : "bg-white/50"}`}
+            className={`w-2 h-2 rounded-full ${index === currentSlide ? "bg-primary" : "bg-primary/50"}`}
             onClick={() => setCurrentSlide(index)}
           >
             <span className="sr-only">Go to slide {index + 1}</span>

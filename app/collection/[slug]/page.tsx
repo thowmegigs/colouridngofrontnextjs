@@ -8,13 +8,13 @@ type Props = {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  // In a real app, fetch category data based on slug
+   const { slug } =await  params
   const category = {
-    name: params.slug
+    name:slug
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" "),
-    description: `Shop our collection of ${params.slug
+    description: `Shop our collection of ${slug
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ")} products.`,

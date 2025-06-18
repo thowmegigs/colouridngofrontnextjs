@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description: "View your order details and track your shipment",
 }
 
-export default function OrderDetailPageWrapper({ params }: { params: { id: string } }) {
-  return <OrderDetailPage orderId={params.id} />
+export default async function OrderDetailPageWrapper({ params }: any) {
+  const { id } = await params
+  return <OrderDetailPage orderId={id} />
 }

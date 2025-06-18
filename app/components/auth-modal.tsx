@@ -1,319 +1,496 @@
 "use client"
 
+import { useEffect, useState } from "react"
+
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/hooks/use-toast"
-import { registerUser, sendOTP, verifyOTP } from "@/lib/api"; // Fixed import path
-import { Loader2, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+import { CheckCircle, Loader2, X, XCircle } from "lucide-react"
+
+import { sendOTP } from "@/lib/api"
+import { useAuth } from "../providers/auth-provider"
+import SafeImage from "./SafeImage"
+import { showToast as toast } from "./show-toast"
 
 interface AuthModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
   couponCode?: string
+  initialView: "login" | "register"
 }
 
-export function AuthModal({ isOpen, onClose, onSuccess, couponCode }: AuthModalProps) {
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login")
+export function AuthModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  couponCode,
+  initialView,
+}: AuthModalProps) {
+  const [activeTab, setActiveTab] = useState<"login" | "register">(initialView)
+
+  /* ---------- login state ---------- */
   const [phoneNumber, setPhoneNumber] = useState("")
   const [otpSent, setOtpSent] = useState(false)
   const [otp, setOtp] = useState("")
+  const [countdown, setCountdown] = useState(0)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+
+  /* ---------- register state ---------- */
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [regPhoneNumber, setRegPhoneNumber] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [countdown, setCountdown] = useState(0)
-  const { toast } = useToast()
+  const [emailOtp, setEmailOtp] = useState("")
+  const [phoneOtp, setPhoneOtp] = useState("")
+  const [emailOtpSent, setEmailOtpSent] = useState(false)
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false)
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null)
+  const [phoneVerified, setPhoneVerified] = useState<boolean | null>(null)
+  const [emailCountdown, setEmailCountdown] = useState(0)
+  const [phoneCountdown, setPhoneCountdown] = useState(0)
+  const [regTermsAccepted, setRegTermsAccepted] = useState(false)
 
+  /* ---------- misc ---------- */
+  const [loading, setLoading] = useState(false)
+  const { login, verifyOtp,  register } = useAuth()
+
+  /* ---------- countdown effects ---------- */
   useEffect(() => {
     if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
-      return () => clearTimeout(timer)
+      const t = setTimeout(() => setCountdown(countdown - 1), 1_000)
+      return () => clearTimeout(t)
     }
   }, [countdown])
 
+  useEffect(() => {
+    if (emailCountdown > 0) {
+      const t = setTimeout(() => setEmailCountdown(emailCountdown - 1), 1_000)
+      return () => clearTimeout(t)
+    }
+  }, [emailCountdown])
+
+  useEffect(() => {
+    if (phoneCountdown > 0) {
+      const t = setTimeout(() => setPhoneCountdown(phoneCountdown - 1), 1_000)
+      return () => clearTimeout(t)
+    }
+  }, [phoneCountdown])
+
+  /* ---------- auth helpers ---------- */
   const handleSendOTP = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
-      toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid phone number",
-        variant: "destructive",
-      })
+    if (phoneNumber.length < 10) {
+      toast({ title: "Invalid phone number", variant: "destructive" })
       return
     }
-
     setLoading(true)
     try {
-      const response = await sendOTP(phoneNumber)
-      if (response.success) {
+      const res: any = await login(phoneNumber)
+      if (res.success) {
         setOtpSent(true)
-        setCountdown(30) // 30 seconds countdown for resend
-        toast({
-          title: "OTP Sent",
-          description: "A verification code has been sent to your phone",
-        })
+        setCountdown(30)
+        toast({ title: "OTP sent", description: "Check your phone" })
       } else {
-        toast({
-          title: "Failed to send OTP",
-          description: response.message || "Please try again later",
-          variant: "destructive",
-        })
+        toast({ title: "Failed", description: res.message, variant: "destructive" })
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send OTP. Please try again.",
-        variant: "destructive",
-      })
     } finally {
       setLoading(false)
     }
   }
 
   const handleVerifyOTP = async () => {
-    if (!otp || otp.length !== 6) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter a valid 6-digit OTP",
-        variant: "destructive",
-      })
+    if (otp.length !== 6) {
+      toast({ title: "Invalid OTP", variant: "destructive" })
       return
     }
-
     setLoading(true)
     try {
-      const response = await verifyOTP(phoneNumber, otp)
-      if (response.success) {
-        toast({
-          title: "Login Successful",
-          description: "You have been logged in successfully",
-        })
+      const res = await verifyOtp(phoneNumber, otp)
+      if (res.success) {
+        toast({ title: "Login successful" })
         onSuccess()
         onClose()
       } else {
-        toast({
-          title: "Invalid OTP",
-          description: response.message || "Please check and try again",
-          variant: "destructive",
-        })
+        toast({ title: "Invalid OTP", description: res.message, variant: "destructive" })
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to verify OTP. Please try again.",
-        variant: "destructive",
-      })
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSendRegOtp = async (type: "email" | "phone") => {
+    const target = type === "email" ? email : regPhoneNumber
+    if (!target) return
+    setLoading(true)
+    try {
+      const res = await sendOTP(type, target, "register")
+      if (res.success) {
+        type === "email" ? setEmailOtpSent(true) : setPhoneOtpSent(true)
+        type === "email" ? setEmailCountdown(30) : setPhoneCountdown(30)
+        toast({ title: `OTP sent to your ${type}` })
+      } else {
+        toast({ title: "Failed", description: res.message, variant: "destructive" })
+      }
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.response?.data?.message, variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerifyRegOtp = async (type: "email" | "phone") => {
+    // const code = type === "email" ? emailOtp : phoneOtp
+    // if (code.length !== 6) return
+    // setLoading(true)
+    // try {
+    //   const res = await verifyRegOtp(code, type, type === "email" ? email : regPhoneNumber)
+    //   if (res.success) {
+    //     type === "email" ? setEmailVerified(true) : setPhoneVerified(true)
+    //     toast({ title: `${type.toUpperCase()} verified` })
+    //   } else {
+    //     toast({ title: "Verification failed", description: res.message })
+    //   }
+    // } catch (e: any) {
+    //   toast({ title: "Verification failed", description: e.response?.data?.message, variant: "destructive" })
+    // } finally {
+    //   setLoading(false)
+    // }
   }
 
   const handleRegister = async () => {
     if (!name || !email || !regPhoneNumber) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
+      toast({ title: "Missing fields", variant: "destructive" })
       return
     }
-
-    if (regPhoneNumber.length < 10) {
-      toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid phone number",
-        variant: "destructive",
-      })
+    if (!phoneVerified) {
+      toast({ title: "Verify  phone first", variant: "destructive" })
       return
     }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      })
-      return
-    }
-
     setLoading(true)
     try {
-      const response = await registerUser(name, email, regPhoneNumber)
-      if (response.success) {
-        toast({
-          title: "Registration Successful",
-          description: "Your account has been created successfully",
-        })
-        // Switch to login tab with phone number pre-filled
+      const res = await register(name, email, regPhoneNumber)
+      if (res.success) {
+        toast({ title: "Registration successful" })
         setPhoneNumber(regPhoneNumber)
         setActiveTab("login")
       } else {
-        toast({
-          title: "Registration Failed",
-          description: response.message || "Please try again later",
-          variant: "destructive",
-        })
+        toast({ title: "Registration failed", description: res.message, variant: "destructive" })
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to register. Please try again.",
-        variant: "destructive",
-      })
     } finally {
       setLoading(false)
     }
   }
 
+  /* ---------- RENDER ---------- */
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center text-xl font-bold">
-            {couponCode ? "Login to Apply Coupon" : "Login or Register"}
-          </DialogTitle>
-          {couponCode && (
-            <p className="text-center text-sm text-muted-foreground">
-              You need to login to apply coupon code <span className="font-semibold">{couponCode}</span>
-            </p>
-          )}
-        </DialogHeader>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent
+        side="bottom"
+        className="h-[98vh] overflow-y-auto sm:max-w-full pt-[130px]"
+      >
+        {/* close btn */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none"
         >
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
         </button>
 
+        {/* header */}
+        <SheetHeader className="flex flex-col items-center gap-2">
+          <SafeImage src="/logo.png" alt="logo" className="h-12 w-auto" width={400} height={200} />
+          <SheetTitle className="text-xl font-bold text-center">
+            {couponCode ? "Login to Apply Coupon" : "Login or Register"}
+          </SheetTitle>
+        </SheetHeader>
+
+        {/* tabs */}
         <Tabs
           value={activeTab}
-          onValueChange={(value) => setActiveTab(value as "login" | "register")}
-          className="w-full"
+          onValueChange={(v) => setActiveTab(v as "login" | "register")}
+          className="mt-4 w-full"
         >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
 
+          {/* ---------- LOGIN TAB ---------- */}
           <TabsContent value="login" className="space-y-4 py-4">
             {!otpSent ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    placeholder="Enter your phone number"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    type="tel"
+              <>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  placeholder="Enter registered phone no."
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                />
+
+                {/* terms */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="login-terms"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="h-4 w-4"
                   />
+                  <label
+                    htmlFor="login-terms"
+                    className="text-sm select-none leading-none"
+                  >
+                     By Continuing, I agree to the{" "}
+                    <a href="/terms" className="text-primary underline">
+                      Terms &amp; Conditions
+                    </a> & <a href="/privacy_policy" className="text-primary underline">
+                     Privacy Policy
+                    </a> and I am above 18 yrs old.
+                  </label>
                 </div>
-                <Button className="w-full" onClick={handleSendOTP} disabled={loading || phoneNumber.length < 10}>
+
+                <Button
+                  onClick={handleSendOTP}
+                  disabled={
+                    loading || phoneNumber.length < 10 || !termsAccepted
+                  }
+                  className="w-full"
+                >
                   {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending OTP...
-                    </>
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     "Send OTP"
                   )}
                 </Button>
-              </div>
+              </>
             ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Verification Code</Label>
-                  <Input
-                    id="otp"
-                    placeholder="Enter 6-digit OTP"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    maxLength={6}
+              <>
+                <Label>OTP</Label>
+                <Input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  maxLength={6}
+                />
+                <p className="text-xs">
+                  OTP sent to {phoneNumber}.{" "}
+                  {countdown > 0 ? (
+                    `Resend in ${countdown}s`
+                  ) : (
+                    <button
+                      onClick={handleSendOTP}
+                      className="text-blue-500 underline"
+                    >
+                      Resend
+                    </button>
+                  )}
+                </p>
+
+                {/* terms again (allow toggle) */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="login-terms2"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="h-4 w-4"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    OTP sent to {phoneNumber}.
-                    {countdown > 0 ? (
-                      <span> Resend in {countdown}s</span>
-                    ) : (
-                      <button className="ml-1 text-primary hover:underline" onClick={handleSendOTP} disabled={loading}>
-                        Resend OTP
-                      </button>
-                    )}
-                  </p>
+                  <label
+                    htmlFor="login-terms2"
+                    className="text-sm select-none leading-none"
+                  >
+                   By Continuing, I agree to the{" "}
+                    <a href="/terms" className="text-primary underline">
+                      Terms &amp; Conditions
+                    </a> & <a href="/privacy_policy" className="text-primary underline">
+                      Privacy Policy
+                    </a> and I am above 18 yrs old.
+                  </label>
                 </div>
+
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setOtpSent(false)} disabled={loading}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setOtpSent(false)}
+                    className="flex-1"
+                  >
                     Back
                   </Button>
-                  <Button className="flex-1" onClick={handleVerifyOTP} disabled={loading || otp.length !== 6}>
+                  <Button
+                    onClick={handleVerifyOTP}
+                    disabled={loading || otp.length !== 6 || !termsAccepted}
+                    className="flex-1"
+                  >
                     {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Verifying...
-                      </>
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       "Verify & Login"
                     )}
                   </Button>
                 </div>
-              </div>
+              </>
             )}
           </TabsContent>
 
+          {/* ---------- REGISTER TAB ---------- */}
           <TabsContent value="register" className="space-y-4 py-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+            <Label>Full Name</Label>
+            <Input
+              placeholder="Enter full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            {/* email block */}
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <div className="relative">
                 <Input
-                  id="name"
-                  placeholder="Enter your full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  placeholder="Enter your email"
-                  type="email"
+                  placeholder="Enter email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="pr-28"
                 />
+                {/* <Button
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 bg-gray-200 text-[12px] text-black hover:bg-gray-300"
+                  onClick={() => handleSendRegOtp("email")}
+                  disabled={emailCountdown > 0}
+                >
+                  {emailCountdown > 0
+                    ? `Resend in ${emailCountdown}s`
+                    : "Send OTP"}
+                </Button> 
+                {emailVerified !== null && (
+                  <span className="absolute right-32 top-1/2 -translate-y-1/2">
+                    {emailVerified ? (
+                      <CheckCircle className="text-green-500" />
+                    ) : (
+                      <XCircle className="text-red-500" />
+                    )}
+                  </span>
+                )}
+                  */}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="regPhone">Phone Number</Label>
+
+              {/* <div className="flex items-center gap-2">
                 <Input
-                  id="regPhone"
-                  placeholder="Enter your phone number"
-                  type="tel"
+                  placeholder="Enter OTP"
+                  value={emailOtp}
+                  onChange={(e) => setEmailOtp(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  size="sm"
+                  className="px-2 py-1"
+                  onClick={() => handleVerifyRegOtp("email")}
+                  disabled={emailOtp.length !== 6}
+                >
+                  Verify
+                </Button>
+              </div> */}
+            </div>
+
+            {/* phone block */}
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <div className="relative">
+                <Input
+                  placeholder="Enter phone no."
                   value={regPhoneNumber}
                   onChange={(e) => setRegPhoneNumber(e.target.value)}
+                  className="pr-28"
                 />
-              </div>
-              <Button
-                className="w-full"
-                onClick={handleRegister}
-                disabled={loading || !name || !email || regPhoneNumber.length < 10}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Registering...
-                  </>
-                ) : (
-                  "Register"
+                <Button
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 bg-gray-200 text-[12px] text-black hover:bg-gray-300"
+                  onClick={() => handleSendRegOtp("phone")}
+                  disabled={phoneCountdown > 0}
+                >
+                  {phoneCountdown > 0
+                    ? `Resend in ${phoneCountdown}s`
+                    : "Send OTP"}
+                </Button>
+                {phoneVerified !== null && (
+                  <span className="absolute right-32 top-1/2 -translate-y-1/2">
+                    {phoneVerified ? (
+                      <CheckCircle className="text-green-500" />
+                    ) : (
+                      <XCircle className="text-red-500" />
+                    )}
+                  </span>
                 )}
-              </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Enter OTP"
+                  value={phoneOtp}
+                  onChange={(e) => setPhoneOtp(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  size="sm"
+                  className="px-2 py-1"
+                  onClick={() => handleVerifyRegOtp("phone")}
+                  disabled={phoneOtp.length !== 6}
+                >
+                  Verify
+                </Button>
+              </div>
             </div>
+
+            {/* terms */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="register-terms"
+                checked={regTermsAccepted}
+                onChange={(e) => setRegTermsAccepted(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <label
+                htmlFor="register-terms"
+                className="text-sm select-none leading-none"
+              >
+                By Continuing, I agree to the{" "}
+                    <a href="/terms" className="text-primary underline">
+                      Terms &amp; Conditions
+                    </a> & <a href="/privacy_policy" className="text-primary underline">
+                     Privacy Policy
+                    </a> and I am above 18 yrs old.
+              </label>
+            </div>
+
+            <Button
+              onClick={handleRegister}
+              disabled={
+                loading ||
+               
+                !phoneVerified ||
+                !regTermsAccepted
+              }
+              className="w-full"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Register"
+              )}
+            </Button>
           </TabsContent>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

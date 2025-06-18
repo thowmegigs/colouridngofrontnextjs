@@ -5,31 +5,34 @@ import type React from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { toast } from "@/hooks/use-toast"
+
 import { AlertCircle, Check, Loader2, Upload, X } from "lucide-react"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
-import { formatCurrency } from "@/app/lib/utils"
+import SafeImage from "@/app/components/SafeImage"
+import { showToast } from "@/app/components/show-toast"
+import { image_base_url } from "@/contant"
 import { fetchOrderById } from "@/lib/api"
 import { createReturn, type ReturnCondition, type ReturnMethod, type ReturnReason } from "@/lib/return-api"
+import { colorNameToHex } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
+import Link from "next/link"
 
-export default function OrderReturnPage({orderId}:any) {
+export default function OrderReturnPage({ orderId }: any) {
   const router = useRouter()
-  
+
   const searchParams = useSearchParams()
-     // From dynamic route
-  const itemId:any = searchParams.get('itemId')
+  // From dynamic route
+  const itemId: any = searchParams.get('itemId')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const qrCodeInputRef = useRef<HTMLInputElement>(null)
+ 
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,13 +42,13 @@ export default function OrderReturnPage({orderId}:any) {
   const [condition, setCondition] = useState<ReturnCondition>("unopened")
   const [description, setDescription] = useState("")
   const [returnMethod, setReturnMethod] = useState<ReturnMethod>("original")
-  const [upiId, setUpiId] = useState("")
+  
 
   // Image upload state
   const [images, setImages] = useState<File[]>([])
   const [imageUrls, setImageUrls] = useState<string[]>([])
-  const [qrCodeImage, setQrCodeImage] = useState<File | null>(null)
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
+ 
+  // Fetch order data
   // Fetch order data
   const {
     data: order,
@@ -67,7 +70,7 @@ export default function OrderReturnPage({orderId}:any) {
 
     // Check if adding these files would exceed the limit
     if (images.length + newFiles.length > 4) {
-      toast({
+      showToast({
         title: "Maximum 4 images allowed",
         description: `You can only upload a maximum of 4 images. You've selected ${images.length + newFiles.length}.`,
         variant: "destructive",
@@ -89,18 +92,7 @@ export default function OrderReturnPage({orderId}:any) {
   }
 
   // Handle QR code upload
-  const handleQrCodeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return
-
-    const file = e.target.files[0]
-    setQrCodeImage(file)
-    setQrCodeUrl(URL.createObjectURL(file))
-
-    // Reset file input
-    if (qrCodeInputRef.current) {
-      qrCodeInputRef.current.value = ""
-    }
-  }
+ 
 
   // Remove image
   const removeImage = (index: number) => {
@@ -117,31 +109,24 @@ export default function OrderReturnPage({orderId}:any) {
     setImageUrls(newUrls)
   }
 
-  // Remove QR code
-  const removeQrCode = () => {
-    if (qrCodeUrl) {
-      URL.revokeObjectURL(qrCodeUrl)
-    }
-    setQrCodeImage(null)
-    setQrCodeUrl(null)
-  }
+  
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // Validate form
-    if (!description.trim()) {
-      toast({
-        title: "Description required",
-        description: "Please provide details about why you're returning this item.",
-        variant: "destructive",
-      })
-      return
-    }
+    // if (!description.trim()) {
+    //   showToast({
+    //     title: "Description required",
+    //     description: "Please provide details about why you're returning this item.",
+    //     variant: "destructive",
+    //   })
+    //   return
+    // }
 
     if (images.length === 0) {
-      toast({
+      showToast({
         title: "Images required",
         description: "Please upload at least one image of the item you want to return.",
         variant: "destructive",
@@ -149,15 +134,7 @@ export default function OrderReturnPage({orderId}:any) {
       return
     }
 
-    if (returnMethod === "upi" && !upiId) {
-      toast({
-        title: "UPI ID required",
-        description: "Please enter your UPI ID for the refund.",
-        variant: "destructive",
-      })
-      return
-    }
-
+    
     try {
       setSubmitting(true)
       setError(null)
@@ -172,12 +149,7 @@ export default function OrderReturnPage({orderId}:any) {
       formData.append("itemId", itemId)
 
       // Add UPI ID if applicable
-      if (returnMethod === "upi") {
-        formData.append("upiId", upiId)
-        if (qrCodeImage) {
-          formData.append("upiQrCode", qrCodeImage)
-        }
-      }
+     
 
       // Add images
       images.forEach((image) => {
@@ -188,20 +160,35 @@ export default function OrderReturnPage({orderId}:any) {
       const response = await createReturn(formData)
 
       // Show success message
-      setSuccess(true)
-      toast({
-        title: "Return request submitted",
-        description: "Your return request has been submitted successfully.",
-      })
+    console.log('res',response)
+      if (!response.success) {
+        showToast({
+
+          description: response.message,
+          variant: "destructive",
+        })
+        return
+      }
+      else {
+          setSuccess(true)
+
+        showToast({
+         
+          description: "Your return request has been submitted successfully.",
+        })
+        setTimeout(() => {
+          router.replace(`/customer/returns/${response.data.returnId}`)
+        }, 2000)
+      }
 
       // Redirect to return details page after a delay
-      setTimeout(() => {
-        router.push(`/customer/returns/${response.data.returnId}`)
-      }, 2000)
+
     } catch (err) {
-      console.error("Error submitting return:", err)
-    //  setError("Failed to submit return request. Please try again.")
-      toast({
+      console.log("Error submitting return:", err)
+      console.log("Error submitting return:", err.response)
+      console.log("Error submitting return:", err.responseJSON)
+      //  setError("Failed to submit return request. Please try again.")
+      showToast({
         title: "Submission failed",
         description: "There was an error submitting your return request. Please try again.",
         variant: "destructive",
@@ -215,9 +202,9 @@ export default function OrderReturnPage({orderId}:any) {
   useEffect(() => {
     return () => {
       imageUrls.forEach((url) => URL.revokeObjectURL(url))
-      if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl)
+    
     }
-  }, [imageUrls, qrCodeUrl])
+  }, [imageUrls])
 
   if (isLoading) {
     return (
@@ -253,7 +240,8 @@ export default function OrderReturnPage({orderId}:any) {
     )
   }
   const orderItem = order?.items?.find((item: any) => item.order_item_id == itemId)
-console.log(itemId, order?.items)
+  const attributes_ar = orderItem?.variant_attributes ? JSON.parse(orderItem.variant_attributes) : []
+
   if (!order || !orderItem) {
     return (
       <Alert variant="destructive" className="max-w-3xl mx-auto my-8">
@@ -284,38 +272,50 @@ console.log(itemId, order?.items)
       </Alert>
     )
   }
+  const imageurl = orderItem?.variant_id
+    ? `${image_base_url}/storage/products/${orderItem?.product_id}/variants/${orderItem?.variant_image}`
+    : `${image_base_url}/storage/products/${orderItem?.product_id}/${orderItem?.product_image}`
+  const original_attributes = orderItem?.original_atributes
+    ? JSON.parse(orderItem?.original_atributes) : null
 
   return (
-    <div className="container max-w-4xl py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Return Request</h1>
-        <p className="text-muted-foreground">
-          Order #{order.orderId} • {new Date(order.created_at).toLocaleDateString()}
+    <div className="container max-w-4xl p-0 m-0 ">
+      <div className="mb-1">
+        <p className="text-muted-foreground font-bold">
+          For Order #{order.orderId}
         </p>
       </div>
 
       {/* Item Information */}
-      <Card className="mb-8">
+      <Card className="mb-2 ">
         <CardHeader>
-          <CardTitle>Item to Return</CardTitle>
+          <CardTitle className="text-lg">Item to Return</CardTitle>
           <CardDescription>You are returning the following item.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-start space-x-4 p-4 bg-muted/20 rounded-lg">
             <div className="flex-shrink-0 w-16 h-16 relative">
-              <Image
-                src={orderItem.image || "/placeholder.svg?height=64&width=64&query=product"}
+              <SafeImage
+                src={imageurl}
                 alt={orderItem.name}
                 fill
-                className="object-cover rounded-md"
+                className="object-fit rounded-md"
               />
             </div>
             <div className="flex-1">
-              <h3 className="font-medium">{orderItem.name}</h3>
-              <div className="text-sm text-muted-foreground mt-1">
-                <span className="mr-3">Color: Red Size: X,XL</span>
-                <span>Qty: {orderItem.qty}</span>
-                <span className="ml-3">Price: {formatCurrency(orderItem.sale_price)}</span>
+              <h3 className="font-medium line-clamp-2 text-md">{orderItem.name}</h3>
+              <h3 className="font-medium line-clamp-2 text-sm text-primary">{orderItem.vendor_name}</h3>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                {original_attributes?.Size && <span className="text-xs font-semibold bg-gray-200 p-1 text-black">Size: {original_attributes?.Size}</span>}
+                {original_attributes?.Color && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-semibold bg-gray-100 p-1 text-black">Color: {original_attributes?.Color}</span>
+                    <div
+                      className="w-3 h-3 rounded-full border"
+                      style={{ backgroundColor: colorNameToHex(original_attributes?.Color) || "#ccc" }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -327,7 +327,7 @@ console.log(itemId, order?.items)
           {/* Return Details */}
           <Card>
             <CardHeader>
-              <CardTitle>Return Details</CardTitle>
+              <CardTitle className="text-lg">Return Details</CardTitle>
               <CardDescription>Tell us why you're returning this item.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -372,7 +372,7 @@ console.log(itemId, order?.items)
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
-                  required
+                  
                 />
               </div>
             </CardContent>
@@ -381,7 +381,7 @@ console.log(itemId, order?.items)
           {/* Upload Images */}
           <Card>
             <CardHeader>
-              <CardTitle>Upload Images</CardTitle>
+              <CardTitle className="text-lg">Upload Images</CardTitle>
               <CardDescription>Upload up to 4 images of the item you're returning (required).</CardDescription>
             </CardHeader>
             <CardContent>
@@ -447,7 +447,7 @@ console.log(itemId, order?.items)
                 className="space-y-4"
               >
                 <div className="flex items-start space-x-2">
-                  <RadioGroupItem value="original" id="original" />
+                  <RadioGroupItem value="Original" id="original" />
                   <div className="grid gap-1.5">
                     <Label htmlFor="original" className="font-medium">
                       Original Payment Method
@@ -459,85 +459,21 @@ console.log(itemId, order?.items)
                 </div>
 
                 <div className="flex items-start space-x-2">
-                  <RadioGroupItem value="store-credit" id="store-credit" />
+                  <RadioGroupItem value="Bank" id="store-credit" />
                   <div className="grid gap-1.5">
                     <Label htmlFor="store-credit" className="font-medium">
-                      Store Credit
+                      Bank/Upi Account
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive store credit that can be used for future purchases.
+                     <p className="text-sm text-muted-foreground">
+                      Receive refund in the account details added in Colourindigo panel
+                      
                     </p>
+                   <Link href="/customer/payment" className="text-xs text-primary">Add/Update Bank Acount here</Link>
+                   
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-2">
-                  <RadioGroupItem value="upi" id="upi" />
-                  <div className="grid gap-1.5 w-full">
-                    <Label htmlFor="upi" className="font-medium">
-                      UPI Transfer
-                    </Label>
-                    <p className="text-sm text-muted-foreground mb-2">Receive refund directly to your UPI ID.</p>
-
-                    {returnMethod === "upi" && (
-                      <div className="space-y-4 mt-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="upi-id">UPI ID</Label>
-                          <Input
-                            id="upi-id"
-                            placeholder="name@bank"
-                            value={upiId}
-                            onChange={(e) => setUpiId(e.target.value)}
-                            required={returnMethod === "upi"}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>UPI QR Code (Optional)</Label>
-                          <div className="flex items-center space-x-4">
-                            {qrCodeUrl ? (
-                              <div className="relative w-32 h-32 border rounded-md overflow-hidden">
-                                <Image
-                                  src={qrCodeUrl || "/placeholder.svg"}
-                                  alt="UPI QR Code"
-                                  fill
-                                  className="object-cover"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={removeQrCode}
-                                  className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-full p-1 text-white"
-                                  aria-label="Remove QR code"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => qrCodeInputRef.current?.click()}
-                                className="w-32 h-32 border-2 border-dashed rounded-md flex flex-col items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
-                              >
-                                <Upload className="h-6 w-6 mb-2" />
-                                <span className="text-xs text-center">Upload QR Code</span>
-                              </button>
-                            )}
-
-                            <input
-                              ref={qrCodeInputRef}
-                              type="file"
-                              accept="image/*"
-                              onChange={handleQrCodeUpload}
-                              className="hidden"
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Upload a clear image of your UPI QR code for faster processing.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+               
               </RadioGroup>
             </CardContent>
           </Card>
@@ -547,7 +483,7 @@ console.log(itemId, order?.items)
             <Button type="button" variant="outline" onClick={() => router.back()}>
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting || (returnMethod === "upi" && !upiId)}>
+            <Button type="submit" disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

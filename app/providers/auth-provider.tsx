@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { api_url } from "@/contant"
+import { apiRequest } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { createContext, useContext, useEffect, useState } from "react"
 
@@ -10,11 +11,11 @@ import { createContext, useContext, useEffect, useState } from "react"
 const API_BASE_URL = api_url // Replace with your actual backend URL
 
 type User = {
-  id: string|number
+  id: string | number
   name: string
   email: string
   phone: string
-  
+
 }
 
 type AuthContextType = {
@@ -22,8 +23,12 @@ type AuthContextType = {
   isLoading: boolean
   isAuthenticated: boolean
   login: (phone: string) => Promise<{ success: boolean; message: string }>
-  verifyOtp: (userId: string, otp: string) => Promise<{ success: boolean; message: string }>
+  verifyOtp: (phone: string, otp: string) => Promise<{ success: boolean; message: string }>
+  //  verifyReOtp: ( otp: string,type:string,val:any) => Promise<{ success: boolean; message: string }>
+  verifyRegOtpAndLogin: (otp: string, name: string, email: string, phone: string) => Promise<{ success: boolean; message: string }>
+  verifyUpdateOtp: (otp: string | null, name: string, email: string, phone: string) => Promise<{ success: boolean; message: string }>
   register: (name: string, email: string, phone: string) => Promise<{ success: boolean; message: string }>
+  updateProfile: (name: string, email: string, phone: string) => Promise<{ success: boolean; message: string }>
   logout: () => Promise<void>
   refreshUser: () => Promise<boolean>
 }
@@ -32,148 +37,237 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is already logged in
+  
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+      
+         const response = await apiRequest(
+        'auth/profile',
+        {
           method: "GET",
-          credentials: "include", // Important for cookies
         })
 
-        const data = await response.json()
-     
-        if (data.success) {
-             console.log('au',data)
-          setUser({...data.data.user})
-          
+       
+       
+          setUser({ ...response.data.user })
+          setIsAuthenticated(true)
 
-        }
+
+
+        
       } catch (error) {
-        console.error("Auth check failed:", error)
+       // console.error("Auth check failed:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    checkAuth()
+    !user && checkAuth()
   }, [])
 
   const login = async (phone: string) => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-        credentials: "include", // Important for cookies
-      })
+      const response = await apiRequest(
+        'auth/login',
+        {
+          method: "POST",
+          requestData: JSON.stringify({ phone })
 
-      const data = await response.json()
+        })
+
       setIsLoading(false)
-
       return {
-        success: data.success,
-        message: data.message,userId:data.data.user.id
+        success: true,
+        message: response.message,
       }
+
     } catch (error) {
       setIsLoading(false)
-      return {
-        success: false,
-        message: "Login failed. Please try again.",
-      }
+      throw new Error(error.message)
     }
   }
 
-  const verifyOtp = async (userId: any, otp: string) => {
+  const verifyOtp = async (phone: any, otp: string) => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, otp }),
-        credentials: "include", // Important for cookies
-      })
 
-      const data = await response.json()
+      const response = await apiRequest(
+        'auth/verify-otp',
+        {
+          method: "POST",
+          requestData: JSON.stringify({ phone, otp })
+
+        })
+
       setIsLoading(false)
-      console.log('after veriy', data)
-      if (data.success) {
-        setUser(data.data.user)
-      }
+      setUser(response.data.user)
+
 
       return {
-        success: data.success,
-        message: data.message,
+        success: true,
+        message: response.message,
       }
     } catch (error) {
       setIsLoading(false)
-      return {
-        success: false,
-        message: "OTP verification failed. Please try again.",
-      }
+      throw new Error(error.message)
     }
   }
+
+  const verifyRegOtpAndLogin = async (otp: string, name: string, email: string, phone: string) => {
+    try {
+      setIsLoading(true)
+
+      const response = await apiRequest(
+        'auth/verify-register-otp-and-login',
+        {
+          method: "POST",
+          requestData: JSON.stringify({ otp, name, email, phone })
+
+        })
+
+      setIsLoading(false)
+      setUser(response.data.user)
+      setIsAuthenticated(true)
+
+
+      return {
+        success: true,
+        message: response.message,
+
+      }
+    } catch (error) {
+      setIsLoading(false)
+      throw new Error(error.message)
+      
+    }
+  }
+  const verifyUpdateOtp = async (otp: string | null, name: string, email: string, phone: string) => {
+    try {
+      setIsLoading(true)
+
+      const response = await apiRequest(
+        'auth/verify-update-otp',
+        {
+          method: "POST",
+          requestData: JSON.stringify({ otp, name, email, phone, user_id: user.id })
+
+        })
+
+
+
+      setIsLoading(false)
+      setUser(response.data.user)
+
+
+
+      return {
+        success: true,
+        message: response.message,
+
+      }
+    } catch (error) {
+      setIsLoading(false)
+      throw new Error(error.message)
+    }
+  }
+
 
   const register = async (name: string, email: string, phone: string) => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone }),
-        credentials: "include", // Important for cookies
-      })
 
-      const data = await response.json()
+      const response = await apiRequest(
+        'auth/register',
+        {
+          method: "POST",
+          requestData: JSON.stringify({ name, email, phone })
+
+        })
+
       setIsLoading(false)
 
       return {
-        success: data.success,
-        message: data.message,userId:data.data.userId
+        success: true,
+        message: response.message, userId: response.data.userId
       }
     } catch (error) {
       setIsLoading(false)
+       throw new Error(error.message)
+    }
+  }
+  const updateProfile = async (name: string, email: string, phone: string) => {
+    try {
+      setIsLoading(true)
+
+      const response = await apiRequest(
+        'auth/profile/update',
+        {
+          method: "POST",
+          requestData: JSON.stringify({ name, email, phone })
+
+        })
+
+      setIsLoading(false)
+
+
+      setUser(response.data.user)
       return {
-        success: false,
-        message: "Registration failed. Please try again.",
+        success: true,
+        message: response.message,
       }
+
+
+    } catch (error) {
+      setIsLoading(false)
+      throw new Error(error.message)
     }
   }
 
   const logout = async () => {
     try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include", // Important for cookies
-      })
+
+      const response = await apiRequest(
+        'auth/logout',
+        {
+          method: "POST",
+          requestData: null
+
+        })
 
       setUser(null)
-      router.push("/")
+      location.reload();
     } catch (error) {
       console.error("Logout error:", error)
+      // return {
+      //   success: false, message: error.message
+      // }
     }
   }
 
   const refreshUser = async (): Promise<boolean> => {
-    console.log('fetching fgf')
+
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-        method: "GET",
-        credentials: "include", // Important for cookies
-      })
 
-      const data = await response.json()
+      const response = await apiRequest(
+        'auth/profile',
+        {
+          method: "GET",
 
-      if (data.success) {
-        setUser(data.data.user)
-        return true
-      }
 
-      return false
+        })
+
+
+
+      setUser(response.data.user)
+      setIsAuthenticated(true)
+      return true
+
     } catch (error) {
       console.error("User refresh failed:", error)
       return false
@@ -183,11 +277,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user, updateProfile,
         isLoading,
-        isAuthenticated: !!user,
+        isAuthenticated,
         login,
         verifyOtp,
+        verifyRegOtpAndLogin,
+        verifyUpdateOtp,
         register,
         logout,
         refreshUser,

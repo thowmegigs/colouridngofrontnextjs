@@ -5,23 +5,28 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 
 export type WishlistItem = {
-  id: string
+  id: number
   name: string
   slug: string
   price: number
-  originalPrice?: number
+sale_price: number
   image: string
-  vendorId: string
-  vendorName: string
-  color?: string
   size?: string
+  color?: string
+  vendorId?: number,
+  
+  vendorName?: string,
+  variantId?: number,
+  maxQuantityAllowed: number,
+ stock:number,
+ 
 }
 
 interface WishlistContextType {
   items: WishlistItem[]
   addItem: (item: WishlistItem) => void
-  removeItem: (id: string) => void
-  isInWishlist: (id: string) => boolean
+  removeItem: (id: number,variantId?:number) => void
+  isInWishlist: (id: number,variantId?:number) => boolean
   clearWishlist: () => void
 }
 
@@ -55,19 +60,19 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const addItem = (item: WishlistItem) => {
     setItems((prevItems) => {
       // Check if item already exists in wishlist
-      if (prevItems.some((existingItem) => existingItem.id === item.id)) {
+      if (prevItems.some((existingItem) => existingItem.variantId?(existingItem.variantId === item.variantId):(existingItem.id === item.id))) {
         return prevItems
       }
       return [...prevItems, item]
     })
   }
 
-  const removeItem = (id: string) => {
-    setItems((prevItems) => prevItems.filter((item) => item.id !== id))
+  const removeItem = (id: number,variantId?:number) => {
+    setItems((prevItems) => prevItems.filter((item) =>item.variantId?(item.variantId!==variantId):(item.id !== id)))
   }
 
-  const isInWishlist = (id: string) => {
-    return items.some((item) => item.id === id)
+  const isInWishlist = (id: number,variantId?:number) => {
+    return items.some((item) =>item.variantId?(item.variantId===variantId):(item.id === id))
   }
 
   const clearWishlist = () => {

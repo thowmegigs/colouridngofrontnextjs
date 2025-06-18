@@ -79,16 +79,17 @@ export function Pagination({ currentPage, totalPages, onPageChange, siblingCount
 
         // Render page number
         return (
-          <Button
-            key={pageNumber}
-            variant={pageNumber === currentPage ? "default" : "outline"}
-            size="icon"
-            onClick={() => onPageChange(pageNumber)}
-            aria-label={`Page ${pageNumber}`}
-            aria-current={pageNumber === currentPage ? "page" : undefined}
-          >
-            {pageNumber}
-          </Button>
+        <Button
+          key={pageNumber}
+          variant={pageNumber == currentPage ? "default" : "outline"}
+          size="icon"
+          onClick={() => onPageChange(pageNumber)}
+          aria-label={`Page ${pageNumber}`}
+          aria-current={pageNumber == currentPage ? "page" : undefined}
+          className={pageNumber == currentPage ? "bg-red-800 text-white" : ""}
+        >
+          {pageNumber}
+        </Button>
         )
       })}
 

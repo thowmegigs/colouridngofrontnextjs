@@ -1,12 +1,11 @@
 "use client"
 
+import SafeImage from "@/app/components/SafeImage"
 import { formatCurrency } from "@/app/lib/utils"
 import { Button } from "@/components/ui/button"
-import { api_url } from "@/contant"
-import { decryptId } from "@/lib/api"
-import axios from "axios"
-import { AlertCircle, CheckCircle, Clock, Package, Truck } from "lucide-react"
-import Image from "next/image"
+import { image_base_url } from "@/contant"
+import { apiRequest, decryptId } from "@/lib/api"
+import { AlertCircle, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -24,7 +23,7 @@ type OrderItem = {
 
 type OrderAddress = {
   name: string
-  
+
   phone_number: string
   address1: string
   address2?: string
@@ -74,15 +73,16 @@ export default function OrderSuccessPage() {
 
       try {
         setLoading(true)
-        const decryptedOrderId = orderId?decryptId(decodeURIComponent(orderId)):null;
-        const response = await axios(`${api_url}/orders/${decryptedOrderId}`)
-         const data = await response.data.data
-      
-      if (!data.estimated_delivery) {
-          data.estimated_delivery = new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000).toISOString()
+        const decryptedOrderId = orderId ? decryptId(decodeURIComponent(orderId)) : null;
+        if(decryptedOrderId) {
+        const response = await apiRequest(`orders/${decryptedOrderId}`,{method:"GET"})
+         
+        if (!response.data.estimated_delivery) {
+          response.data.estimated_delivery = new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000).toISOString()
         }
 
-        setOrder(data)
+        setOrder(response.data)
+      }
       } catch (err) {
         console.error("Error fetching order:", err)
         setError("Failed to load order details. Please try again later.")
@@ -92,7 +92,7 @@ export default function OrderSuccessPage() {
     }
 
     fetchOrderDetails()
-  }, [orderId,decryptId])
+  }, [orderId, decryptId])
 
   if (loading) {
     return (
@@ -136,7 +136,7 @@ export default function OrderSuccessPage() {
           <div className="bg-muted px-6 py-4 font-medium">Order Details</div>
 
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 grid-cols-2 gap-6 mb-6">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Order Number</h3>
                 <p className="font-medium">{order.orderId}</p>
@@ -177,11 +177,14 @@ export default function OrderSuccessPage() {
             <div className="border-t pt-6">
               <h3 className="font-medium mb-4">Order Items</h3>
               <ul className="space-y-4">
-                {order.items.map((item:any) => (
-                  <li key={item.id} className="flex">
+                {order.items && order.items.length>0 && order.items.map((item: any,index:number) => {
+                  const imageurl = item.variant_id
+                    ? `${image_base_url}/storage/products/${item.product_id}/variants/${item.variant_image}`
+                    : `${image_base_url}/storage/products/${item.product_id}/${item.product_image}`
+                  return <li key={item.id+index} className="flex">
                     <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-muted">
-                      <Image
-                        src={item.image || "/placeholder.svg?height=64&width=64&query=product"}
+                      <SafeImage
+                        src={imageurl}
                         alt={item.name}
                         width={64}
                         height={64}
@@ -201,7 +204,7 @@ export default function OrderSuccessPage() {
                       </div>
                     </div>
                   </li>
-                ))}
+                })}
               </ul>
 
               <div className="mt-6 border-t pt-4">
@@ -235,17 +238,17 @@ export default function OrderSuccessPage() {
               <p className="font-medium">{order.shipping_name}</p>
               <p>{order.shipping_address1}</p>
               {order.shipping_address2 &&
-                   <p>{order.shipping_address2}</p>
+                <p>{order.shipping_address2}</p>
               }
               <p>
                 {order.shipping_city_name}, {order.shipping_state_name} {order.shipping_pincode}
               </p>
-              
+
               <p className="mt-2">{order.shipping_phone_number}</p>
             </div>
           </div>
 
-          <div className="border rounded-lg p-6">
+          {/* <div className="border rounded-lg p-6">
             <h3 className="font-medium mb-4">Shipping Information</h3>
             <div className="space-y-4">
               <div className="flex items-start">
@@ -282,7 +285,7 @@ export default function OrderSuccessPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

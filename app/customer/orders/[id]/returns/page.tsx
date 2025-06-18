@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description: "Request a return for your order",
 }
 
-export default function Page({ params }: { params: { id: string } }) {
-  return <OrderReturnPage orderId={params.id} />
+export default async function Page({ params }: any) {
+  const { id } = await params
+  return <OrderReturnPage orderId={id} />
 }

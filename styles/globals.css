@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  @apply font-sans;
 }
 
 @layer utilities {
@@ -91,4 +91,22 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+.prose p{
+  font-family:inherit !important;font-size:13px!important;
+}
+.prose ul{
+  font-family:inherit !important;font-size:13px!important;
+}
+.swiper-pagination-bullet {
+  background-color: gray;
+  opacity: 0.5;
+}
+.swiper-pagination-bullet-active {
+  background-color: white;
+  opacity: 1;
+}
+.custom-swiper .swiper-pagination {
+  @apply mt-2 flex justify-center; /* Tailwind utility applied */
+  position: relative !important;
 }

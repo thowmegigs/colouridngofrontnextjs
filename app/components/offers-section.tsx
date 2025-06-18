@@ -1,8 +1,7 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Check, Copy, Scissors } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { formatDate } from "../lib/utils"
 
 type Coupon = {
   id: string
@@ -11,128 +10,91 @@ type Coupon = {
   description: string
   short_description: string
   endDate: string
- 
 }
+
 const colors = ['red', 'blue', 'green', 'yellow', 'purple'];
-const colorMap :any= {
+const colorMap: any = {
   red: {
-    solid: "#ef4444",     // Tailwind red-500
-    transparent: "#ef4444cc", // ~80% opacity (cc = 204)
+    solid: "#ef4444",
+    transparent: "#ef4444cc",
   },
   blue: {
-    solid: "#3b82f6",     // Tailwind blue-500
+    solid: "#3b82f6",
     transparent: "#3b82f6cc",
   },
   green: {
-    solid: "#22c55e",     // Tailwind green-500
+    solid: "#22c55e",
     transparent: "#22c55ecc",
   },
   yellow: {
-    solid: "#eab308",     // Tailwind yellow-500
+    solid: "#eab308",
     transparent: "#eab308cc",
   },
   purple: {
-    solid: "#8b5cf6",     // Tailwind purple-500
+    solid: "#8b5cf6",
     transparent: "#8b5cf6cc",
   },
 };
 
-
-
-export default function OffersSection(data:any) {
+export default function OffersSection(data: any) {
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null)
+  const [randomColor, setRandomColor] = useState<string | null>(null);
+  const coupons = data.data.coupons1;
 
-  const handleCopyCode = (code: string) => {
-      navigator.clipboard.writeText(code)
-      setCopiedCoupon(code)
-      setTimeout(() => setCopiedCoupon(null), 2000)
-    }
+  useEffect(() => {
+    const colors = Object.keys(colorMap);
+    const random = colors[Math.floor(Math.random() * colors.length)];
+    setRandomColor(random);
+  }, []);
 
-  
-  const coupons=data.data.coupons1;
   const couponColors = useMemo(() => {
     const result: Record<string, string> = {};
-    if(coupons && Array.isArray(coupons)){
-    coupons.forEach((coupon: any) => {
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      result[coupon.id] = color;
-    });
-  }
+    if (coupons && Array.isArray(coupons)) {
+      coupons.forEach((coupon: any) => {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        result[coupon.id] = color;
+      });
+    }
     return result;
   }, [coupons]);
 
+  if (!randomColor) return null;
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code)
+    setCopiedCoupon(code)
+    setTimeout(() => setCopiedCoupon(null), 2000)
+  }
+
   return (
-    <div className="card elevation-4 py-3 bg-gray-50 rounded-lg ">
-      <div className="container  ">
-        <h2 className="text-3xl font-bold text-center mb-2">Special Offers</h2>
-        <p className="text-center text-muted-foreground mb-8">Use these exclusive coupons to save on your purchase</p>
+    <div className="card elevation-4 py-6 rounded-lg">
+      <div className="container px-1 mx-auto">
+        <h2 className="text-md md:text-lg font-bold  mb-2">Special Offers</h2>
+        <p className=" text-sm md:text-md text-muted-foreground mb-8">Use these exclusive coupons to save on your purchase</p>
 
-        <div className="flex justify-center">
-  <div
-    className={`grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3`}
-   
-  >
-    {Array.isArray(coupons) && coupons.map((coupon: any) => {
-      const randomColor = couponColors[coupon.id];
-      return (
-        <div
-          key={coupon.id}
-          className="relative  rounded-lg shadow-md overflow-hidden"
-          style={{
-            boxShadow:'rgb(215 220 223) 1px 1px 9px 3px',
-            background: `linear-gradient(135deg, ${randomColor} 0%, ${colorMap[randomColor]['transparent']} 100%)`,
-            color: "white",
-          }}
-        >
-          {/* Coupon Content */}
-          <div className="p-6">
-            <div className="text-xs font-semibold mb-1 opacity-80">COUPON CODE</div>
-            <div className="flex items-center justify-between">
-              <div className="font-mono text-lg font-bold">{coupon.code}</div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-current hover:bg-white/20"
-                onClick={() => handleCopyCode(coupon.code)}
-              >
-                {copiedCoupon === coupon.code ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <div className="text-xl font-bold ml-5">
-              {coupon.discount}% OFF
-            </div>
-            <div className="mt-2 text-sm opacity-90 h-10 p-[5px]">{coupon.description}</div>
+        <div className="overflow-x-auto">
+          <div className="flex space-x-4 snap-x snap-mandatory scroll-smooth pb-4">
+            {Array.isArray(coupons) && coupons.map((coupon: any) => {
+              const randomColor = couponColors[coupon.id];
+              return (
+                <div key={coupon.id} className="border border-dashed border-red-300 bg-red-50 gap-4 p-4 rounded-md flex justify-between items-center min-w-[300px]">
+                  <div>
+                    <p className="text-xl font-bold text-red-800">{coupon.short_description}</p>
+                    <p className="text-sm font-semibold text-red-600 tracking-wider mt-1">
+                      {coupon.code}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-800">{coupon.description}</p>
+                    <p className="text-xs text-gray-500">Valid until {formatDate(coupon.end_date)}</p>
+                    <button className="mt-2 bg-red-800 text-white text-sm font-semibold px-4 py-1 rounded-full hover:bg-red-900">
+                      USE NOW
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
-
-          {/* Scissors and dotted line */}
-          <div className="absolute -left-3 top-1/2 transform -translate-y-1/2 ">
-            <div className={`bg-[${colorMap[randomColor]['transparent']}] rounded-full p-1 shadow-md`}>
-              <Scissors className="h-4 w-4 text-gray-500" />
-            </div>
-          </div>
-          <div className="absolute -right-3 top-1/2 transform -translate-y-1/2">
-            <div className={`bg-[${colorMap[randomColor]['transparent']}] rounded-full p-1 shadow-md`}>
-              <Scissors className="h-4 w-4 text-gray-500" />
-            </div>
-          </div>
-          <div className="absolute left-0 right-0 top-1/2 transform -translate-y-1/2 border-t-2 border-dashed border-white/30 z-0"></div>
-
-          {/* Coupon bottom part */}
-          <div className="p-4 bg-white/20 text-xs text-center">{coupon.end_date}</div>
-
-          {/* Circular cuts on sides */}
-          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-6 h-12 bg-gray-100 rounded-r-full"></div>
-          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-6 h-12 bg-gray-100 rounded-l-full"></div>
         </div>
-      );
-    })}
-  </div>
-</div>
-
       </div>
     </div>
   )

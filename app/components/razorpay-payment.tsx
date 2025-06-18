@@ -109,7 +109,7 @@ export default function RazorpayPayment({
 
     try {
       const options: RazorpayOptions = {
-        key: "rzp_test_lqCTRo1GEMjzHn",
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: amount * 100, // Razorpay expects amount in smallest currency unit (paise for INR)
         currency,
         name,

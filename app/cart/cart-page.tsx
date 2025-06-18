@@ -18,29 +18,32 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
+import { image_base_url } from "@/contant"
 import { useMobile } from "@/hooks/use-mobile"
 import { fetchAvailableCoupons, type Coupon } from "@/lib/api"
 import {
   AlertCircle,
   Check,
-  ChevronDown,
   ChevronRight,
   Loader2,
   Minus,
   Plus,
+  RotateCcw,
   Search,
   ShoppingCart,
   Tag,
-  X,
+  X
 } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { AuthModal } from "../components/auth-modal"
+import SafeImage from "../components/SafeImage"
+import { showToast } from "../components/show-toast"
 import { formatCurrency } from "../lib/utils"
+import { useAuth } from "../providers/auth-provider"
 import { useCart } from "../providers/cart-provider"
-import { useToast } from "../providers/ToastProvider"
+
 
 export default function CartPage() {
   const router = useRouter()
@@ -55,7 +58,7 @@ export default function CartPage() {
     applyCoupon,
     removeCoupon,
     isCouponLoading,
-    couponError,
+    couponError, shipping_cost
   } = useCart()
 
   const [couponCode, setCouponCode] = useState("")
@@ -68,9 +71,10 @@ export default function CartPage() {
   const [pendingCouponCode, setPendingCouponCode] = useState<string | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(false)
-  const [showOrderSummary, setShowOrderSummary] = useState(false)
 
-  const { showToast } = useToast()
+
+  const { isAuthenticated } = useAuth();
+
   const isMobile = useMobile()
 
   // Check login status on component mount
@@ -88,11 +92,14 @@ export default function CartPage() {
         setIsLoadingCoupons(true)
         try {
           const coupons = await fetchAvailableCoupons()
-          console.log('coiupons',coupons)
+          console.log('coiupons', coupons)
           setAvailableCoupons(coupons)
         } catch (error) {
           console.error("Error fetching coupons:", error)
-          showToast( "Error", "Failed to load available coupons")
+          showToast({
+            title: "Error", description: "Failed to load available coupons",
+            variant: 'destructive'
+          })
         } finally {
           setIsLoadingCoupons(false)
         }
@@ -147,7 +154,9 @@ export default function CartPage() {
       setCouponCode("")
       setShowCoupons(false)
 
-      showToast("Coupon Applied",result.message as any)
+      showToast({
+        title: "Coupon Applied", description: result.message as any
+      })
     } else {
       setCouponMessage({
         type: "error",
@@ -165,14 +174,17 @@ export default function CartPage() {
     const result = await removeCoupon()
 
     if (result.success) {
-      showToast( "Coupon Removed", "Coupon has been removed from your cart")
+      showToast({
+        title: "Coupon Removed", description: "Coupon has been removed from your cart"
+      })
     }
   }
 
   const handleAuthSuccess = () => {
     setIsLoggedIn(true)
     setIsAuthModalOpen(false)
-
+    setIsCheckingAuth(false)
+    router.push('/checkout')
     // If there was a pending coupon code, apply it now
     if (pendingCouponCode) {
       processCouponApplication(pendingCouponCode)
@@ -183,17 +195,12 @@ export default function CartPage() {
   const handleCheckoutClick = () => {
     setIsCheckingAuth(true)
 
-    // Check if user is logged in
-    const userToken = localStorage.getItem("userToken")
-    const isLoggedInValue = localStorage.getItem("isLoggedIn") === "true"
-    const userIsLoggedIn = !!userToken || isLoggedInValue
-
-    if (userIsLoggedIn) {
+    if (isAuthenticated) {
       // User is logged in, proceed to checkout
       router.push("/checkout")
     } else {
       // User is not logged in, redirect to auth page
-      router.push("/checkout/auth")
+      router.push('auth/login?redirect=/checkout')
     }
   }
 
@@ -243,7 +250,7 @@ export default function CartPage() {
           </div>
 
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-            {filteredCoupons  && filteredCoupons.length > 0 ? (
+            {filteredCoupons && filteredCoupons.length > 0 ? (
               filteredCoupons.map((coupon) => (
                 <div key={coupon.code} className="border rounded-lg p-4 hover:border-primary transition-colors">
                   <div className="flex flex-col space-y-3">
@@ -272,10 +279,10 @@ export default function CartPage() {
                         variant="outline"
                         onClick={() => {
                           navigator.clipboard.writeText(coupon.code)
-                          toast({
+                          showToast({
                             title: "Copied!",
                             description: `Coupon code ${coupon.code} copied to clipboard`,
-                            duration: 2000,
+
                           })
                         }}
                         className="w-full sm:w-auto"
@@ -326,9 +333,8 @@ export default function CartPage() {
 
           {couponMessage && (
             <div
-              className={`text-sm flex items-center ${
-                couponMessage.type === "success" ? "text-green-600" : "text-destructive"
-              }`}
+              className={`text-sm flex items-center ${couponMessage.type === "success" ? "text-green-600" : "text-destructive"
+                }`}
             >
               {couponMessage.type === "success" ? (
                 <Check className="h-4 w-4 mr-1" />
@@ -346,7 +352,7 @@ export default function CartPage() {
   // Mobile Android-style cart
   if (isMobile) {
     return (
-      <div className="pb-32">
+      <div className="pb-10">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white dark:bg-gray-950 border-b px-4 py-3 flex items-center justify-between">
           <h1 className="text-lg font-medium">Cart ({items.length})</h1>
@@ -369,37 +375,48 @@ export default function CartPage() {
         {/* Cart items */}
         <div className="divide-y">
           {items.map((item) => (
-            <div key={item.id} className="px-4 py-3 bg-white dark:bg-gray-950 flex items-center">
+            <div key={item.variantId ?? item.id} className="px-4 py-3 bg-white dark:bg-gray-950 flex items-center">
               {/* Product image */}
-              <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 mr-3 bg-gray-100 dark:bg-gray-800">
-                <Image
-                  src={item.image || "/placeholder.svg"}
+              <div className="w-[110px] h-full rounded overflow-hidden flex-shrink-0 mr-3 bg-gray-100 dark:bg-gray-800">
+                <SafeImage
+                  fallbackSrc="/placeholder.png"
+                  src={item.variantId
+                    ? `${image_base_url}/storage/products/${item.id}/variants/${item.image}`
+                    : `${image_base_url}/storage/products/${item.id}/${item.image}`
+                  }
                   alt={item.name}
                   width={64}
                   height={64}
-                  className="w-full h-full object-cover"
+                  className="w-full h-[150px] object-fit"
                 />
               </div>
 
               {/* Product details */}
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start">
-                  <h3 className="font-medium text-sm truncate pr-2">{item.name}</h3>
+                  <h3 className="font-extrabold text-sm truncate pr-2">{item.name}</h3>
+
                   <button
-                    onClick={() => removeItem(item.id,item.variantId)}
+                    onClick={() => removeItem(item.id, item.variantId)}
                     className="text-gray-400 p-1 -mr-1 -mt-1"
                     aria-label="Remove item"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
+                <p className="text-xs  mt-1">Sold by: <span className="font-extrabold">{item.vendorName}</span></p>
 
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {item.size && `Size: ${item.size}`}
-                  {item.size && item.color && " • "}
-                  {item.color && `Color: ${item.color}`}
+                <p className="text-xs font-bold my-2">
+                  {item.size && <span className="inline-flex items-center px-4 py-1 text-xs font-bold bg-gray-200 text-gray-800">Size: {item.size}</span>}
+                  {item.size && item.color && " | "}
+                  {item.color && <span className="inline-flex items-center px-4 py-1  text-xs font-bold bg-gray-200 text-gray-800">Color: {item.color}</span>}
+                </p>
+                {item.isReturnable &&
+                <div className="flex items-center space-x-2 my-2 text-sm  font-medium">
+                  <RotateCcw className="w-4 h-4" />
+                  <span><span className="font-extrabold">2 days</span> return available</span>
                 </div>
-
+          }
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center h-8 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                     <button
@@ -421,10 +438,10 @@ export default function CartPage() {
                   </div>
 
                   <div className="text-right">
-                    <div className="font-medium text-sm">{formatCurrency(item.price * item.quantity)}</div>
-                    {item.originalPrice && (
+                    <div className="font-medium text-sm">{formatCurrency(item.sale_price * item.quantity)}</div>
+                    {item.price && (
                       <div className="text-xs text-gray-500 dark:text-gray-400 line-through">
-                        {formatCurrency(item.originalPrice * item.quantity)}
+                        {formatCurrency(item.price * item.quantity)}
                       </div>
                     )}
                   </div>
@@ -505,41 +522,47 @@ export default function CartPage() {
         <div className="px-4 py-3 border-t border-b">
           <button
             className="w-full flex items-center justify-between"
-            onClick={() => setShowOrderSummary(!showOrderSummary)}
+          // onClick={() => setShowOrderSummary(!showOrderSummary)}
           >
             <span className="font-medium">Order Summary</span>
-            <ChevronDown className={`h-5 w-5 transition-transform ${showOrderSummary ? "rotate-180" : ""}`} />
+            {/* <ChevronDown className={`h-5 w-5 transition-transform ${showOrderSummary ? "rotate-180" : ""}`} /> */}
           </button>
 
-          {showOrderSummary && (
-            <div className="pt-3 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
-                <span>{formatCurrency(subtotal)}</span>
+
+          <div className="pt-3 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+
+            {discount > 0 && (
+              <div className="flex justify-between text-green-600 dark:text-green-400">
+                <span>Discount</span>
+                <span>-{formatCurrency(discount)}</span>
               </div>
+            )}
 
-              {discount > 0 && (
-                <div className="flex justify-between text-green-600 dark:text-green-400">
-                  <span>Discount</span>
-                  <span>-{formatCurrency(discount)}</span>
-                </div>
-              )}
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Shipping</span>
-                <span className="text-gray-500 dark:text-gray-400">Calculated at checkout</span>
+            <div className="flex justify-between">
+              <span className="text-gray-500 dark:text-gray-400">Shipping</span>
+              <span className="text-gray-500 dark:text-gray-400">{formatCurrency(shipping_cost)}</span>
+            </div>
+            <div className="border-t pt-2 mt-2">
+              <div className="flex justify-between font-medium text-lg">
+                <span>Total</span>
+                <span>{formatCurrency(total)}</span>
               </div>
             </div>
-          )}
+          </div>
+
         </div>
 
         {/* Fixed bottom bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-950 border-t px-4 py-3 flex items-center justify-between z-20">
           <div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
-            <div className="text-lg font-bold">{formatCurrency(total)}</div>
+            <div className="text-sm font-bold">{formatCurrency(total)}</div>
           </div>
-          <Button className="h-12 px-6 text-base" onClick={handleCheckoutClick} disabled={isCheckingAuth}>
+          <Button className="px-4 py-2 rounded-md text-sm" onClick={handleCheckoutClick} disabled={isCheckingAuth}>
             {isCheckingAuth ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -560,9 +583,23 @@ export default function CartPage() {
           }}
           onSuccess={handleAuthSuccess}
           initialView="login"
-          title="Login Required"
-          description="Please log in to apply coupon codes"
+
+
         />
+        {/* <Button
+          className="mt-4 w-full h-10 text-base fixed bottom-20"
+          onClick={handleCheckoutClick}
+          disabled={isCheckingAuth}
+        >
+          {isCheckingAuth ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            "Proceed To Checkout"
+          )}
+        </Button> */}
       </div>
     )
   }
@@ -611,15 +648,19 @@ export default function CartPage() {
 
             <ul className="divide-y">
               {items.map((item) => (
-                <li key={item.id} className="p-4 sm:p-6">
+                <li key={item.variantId ?? item.id} className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row">
                     <div className="sm:w-24 sm:h-24 mb-4 sm:mb-0 sm:mr-6 flex-shrink-0">
-                      <Image
-                        src={item.image || "/placeholder.svg"}
+                      <SafeImage
+                        fallbackSrc="/placeholder.png"
+                        src={item.variantId
+                          ? `${image_base_url}/storage/products/${item.id}/variants/${item.image}`
+                          : `${image_base_url}/storage/products/${item.id}/${item.image}`
+                        }
                         alt={item.name}
-                        width={96}
-                        height={96}
-                        className="w-full h-auto object-cover rounded-md"
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
                       />
                     </div>
 
@@ -644,7 +685,7 @@ export default function CartPage() {
 
                         <button
                           className="text-muted-foreground hover:text-foreground"
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.id, item.variantId)}
                         >
                           <X className="h-5 w-5" />
                           <span className="sr-only">Remove</span>
@@ -674,7 +715,7 @@ export default function CartPage() {
                         </div>
 
                         <div className="text-right">
-                          <div className="font-medium">{formatCurrency(item.price * item.quantity)}</div>
+                          <div className="font-medium">{formatCurrency(item.sale_price * item.quantity)}</div>
                           {item.price && (
                             <div className="text-sm text-muted-foreground line-through">
                               {formatCurrency(item.price * item.quantity)}
@@ -710,7 +751,7 @@ export default function CartPage() {
 
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>Calculated at checkout</span>
+                  <span>{formatCurrency(shipping_cost)}</span>
                 </div>
 
                 <div className="border-t pt-2 mt-2">
@@ -820,8 +861,7 @@ export default function CartPage() {
         }}
         onSuccess={handleAuthSuccess}
         initialView="login"
-        title="Login Required"
-        description="Please log in to apply coupon codes"
+
       />
     </div>
   )

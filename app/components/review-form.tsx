@@ -13,7 +13,7 @@ import Image from "next/image"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { useToast } from "../providers/ToastProvider"
+
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
@@ -63,7 +63,7 @@ export function ReviewForm({ productId, onSuccess, onCancel }: ReviewFormProps) 
   const [hoverRating, setHoverRating] = useState(0)
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([])
-  const { showToast } = useToast()
+  
   const showSuccess = (message: string) => {
     setAlert({ type: 'success', message });
     setTimeout(() => setAlert(null), 30000); // Auto-dismiss
@@ -127,7 +127,7 @@ export function ReviewForm({ productId, onSuccess, onCancel }: ReviewFormProps) 
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log('uplaoded', uploadedImages)
+   
     setIsSubmitting(true)
     try {
       const formData = new FormData()

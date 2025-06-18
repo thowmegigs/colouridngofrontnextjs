@@ -39,12 +39,12 @@ export default function ReturnHistoryPage() {
 
   // Get color based on return status
   const getStatusColor = (status: string) => {
-    if (status.includes("Requested")) return "bg-yellow-100 text-yellow-800"
-    if (status.includes("Approved")) return "bg-blue-100 text-blue-800"
-    if (status.includes("Processing")) return "bg-purple-100 text-purple-800"
-    if (status.includes("Completed")) return "bg-green-100 text-green-800"
-    if (status.includes("Cancelled")) return "bg-red-100 text-red-800"
-    if (status.includes("Rejected")) return "bg-red-100 text-red-800"
+    if (status.includes("Return Requested")) return "bg-yellow-100 text-yellow-800"
+    if (status.includes("Return Approved")) return "bg-blue-100 text-blue-800"
+    if (status.includes("Return Processing")) return "bg-purple-100 text-purple-800"
+    if (status.includes("Return Completed")) return "bg-green-100 text-green-800"
+    if (status.includes("Return Cancelled")) return "bg-red-100 text-red-800"
+   
     return "bg-gray-100 text-gray-800"
   }
 

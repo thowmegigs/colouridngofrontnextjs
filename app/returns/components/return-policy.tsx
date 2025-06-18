@@ -7,7 +7,7 @@ export default function ReturnPolicy() {
       <div className="p-6">
         <div className="prose prose-sm max-w-none">
           <p>
-            Most items purchased from MultiVendor Marketplace can be returned within 30 days of delivery. However,
+            Most items purchased from MultiVendor Marketplace can be returned within 2 days of delivery. However,
             certain products have different return policies:
           </p>
 

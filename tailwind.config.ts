@@ -18,6 +18,9 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Nunito'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -27,6 +30,16 @@ const config: Config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+           50:  "#fef2f2",
+          100: "#fde8e8",
+          200: "#fbd5d5",
+          300: "#f8b4b4",
+          400: "#f98080",
+          500: "#f05252",
+          600: "#e02424",
+          700: "#ae1313",   // Your main color
+          800: "#8b0e0e",
+          900: "#620b0b"
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

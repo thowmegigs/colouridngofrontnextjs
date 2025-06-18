@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description: "View your return request details and status",
 }
 
-export default function Page({ params }: { params: { id: string } }) {
-  return <ReturnDetailPage returnId={params.id} />
+export default async function Page({ params }: any) {
+  const { id } = await params
+  return <ReturnDetailPage returnId={id} />
 }

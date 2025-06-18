@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
  const pathname = usePathname()
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('checking auth',isAuthenticated)
+    
      
         if (!isAuthenticated) {
           // Try to refresh user data once
@@ -30,7 +30,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
      
     }
 
-    checkAuth()
+   !isAuthenticated &&  checkAuth()
   }, [isLoading, isAuthenticated, refreshUser, router])
 
   if (isLoading || isChecking) {

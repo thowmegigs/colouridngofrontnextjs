@@ -4,6 +4,11 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+export function slugToNiceName(slug) {
+  return slug
+    .replace(/-/g, ' ')                 // Replace dashes with spaces
+    .replace(/\b\w/g, char => char.toUpperCase()); // Capitalize each word
+}
 export function capitalizeWords(sentence:string) {
   return sentence
     .toLowerCase()

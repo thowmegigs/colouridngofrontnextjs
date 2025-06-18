@@ -93,14 +93,11 @@ export async function createReturn(formData: FormData) {
   try {
     const response = await fetch(`${API_URL}/returns`, {
       method: "POST",
+    
       credentials: "include", // Include cookies for authentication
       body: formData,
     })
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.message || "Failed to create return request")
-    }
 
     return await response.json()
   } catch (error) {

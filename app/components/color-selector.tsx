@@ -28,7 +28,7 @@ export function ColorSelector({
     <div className="flex flex-wrap gap-3">
       {colors.map((color) => {
         const isSelected = selectedColor?.name === color.name
-        const isCurrent = currentColor === color.name
+        const isCurrent = currentColor.toLowerCase() === color.name.toLowerCase()
         const isOutOfStock = outOfStockColors.includes(color.name)
         const isDisabled = isCurrent || isOutOfStock
 

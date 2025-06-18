@@ -148,3 +148,47 @@
   object-fit: cover;      /* Ensures the image covers the entire container */
   object-position: center top; /* Keeps the center part visible and cuts the upper part */
 }
+.prose p{
+  font-family:inherit !important;font-size:13px!important;
+}
+.prose ul{
+  font-family:inherit !important;font-size:13px!important;
+}
+.swiper-pagination-bullet {
+  background-color: gray;
+  opacity: 0.5;
+}
+.swiper-pagination-bullet-active {
+  background-color: white;
+  opacity: 1;
+}
+.custom-swiper .swiper-pagination {
+  @apply mt-2 flex justify-center; /* Tailwind utility applied */
+  position: relative !important;
+}
+.swiper-button-prev::after,
+.swiper-button-next::after {
+  font-size: 12px !important; /* default is 44px */
+}
+.custom-swiper1 .swiper-pagination {
+ background: rgb(218, 196, 196);
+ width:50px!important;
+ left:50%!important;height:29px!important;
+ transform: translateX(-50%)!important;
+  bottom: -9px!important; /* pushes the dots 10cm below the swiper */
+}
+.custom-swiper1{
+  padding-bottom:30px!important;
+}
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.slide-down {
+  animation: slideDown 0.5s ease-out forwards;
+}

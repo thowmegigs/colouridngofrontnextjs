@@ -1,55 +1,91 @@
 "use client"
 
+import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import type React from "react"
+import { useEffect, useState } from "react"
 
+import SafeImage from "@/app/components/SafeImage"
 import { useAuth } from "@/app/providers/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from 'lucide-react'
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { Loader2 } from "lucide-react"
 
 export default function LoginForm() {
-  
   const [phone, setPhone] = useState("")
   const [otp, setOtp] = useState("")
   const [user_id, setUserId] = useState("")
-   
-
   const [otpSent, setOtpSent] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const { login, verifyOtp, isLoading,isAuthenticated } = useAuth()
+  const [timer, setTimer] = useState(30)
+  const [canResendOtp, setCanResendOtp] = useState(false)
+
+  const { login, verifyOtp, isLoading, refreshUser,isAuthenticated } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/customer/dashboard'
-    useEffect(() => {
-    if(isAuthenticated){
-      // console.log('goimg',redirect)
+  const redirect = searchParams.get("redirect") || "/checkout"
+
+  useEffect(() => {
+    console.log('isAtthen',isAuthenticated)
+    const refersh=async()=>{
+        const success = await refreshUser()
+          if (success) {
+            router.push(redirect)
+          }
+    }
+    if (isAuthenticated) {
       router.replace(redirect)
     }
-    }, [redirect,isAuthenticated])
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault()
+    else{
+    refersh()
+    }
+  }, [redirect, isAuthenticated])
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+
+    if (otpSent && !canResendOtp) {
+      interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval)
+            setCanResendOtp(true)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    return () => clearInterval(interval)
+  }, [otpSent, canResendOtp])
+
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     setError("")
     setSuccess("")
 
-    if (!phone || phone.length < 10) {
-      setError("Please enter a valid phone number")
-      return
-    }
+    try {
+      if (!phone || phone.length < 10) {
+        setError("Please enter a valid phone number")
+        return
+      }
 
-    const result:any = await login(phone)
-console.log('result',result)
-    if (result.success) {
+      const result: any = await login(phone)
+
+
       setOtpSent(true)
       setUserId(result.userId)
-      setSuccess("OTP sent successfully to your phone")
-    } else {
-      setError(result.message)
+      setSuccess("OTP has been sent to your phone number")
+      setTimer(30)
+      setCanResendOtp(false)
+
+    } catch (error: any) {
+      console.log('got err', error)
+      setError(error?.message || "Failed to send OTP")
     }
   }
 
@@ -58,27 +94,25 @@ console.log('result',result)
     setError("")
     setSuccess("")
 
-    if (!otp || otp.length < 4) {
+    if (!otp || otp.length !== 6) {
       setError("Please enter a valid OTP")
       return
     }
+    try {
+      const result = await verifyOtp(phone, otp)
 
-    const result = await verifyOtp(user_id, otp)
-    if (result.success) {
-      setSuccess("Login successful! Redirecting...")
-      console.log('redirect',redirect)
-      setTimeout(() => {
-        router.push(redirect)
-      }, 1500)
-    } else {
-      setError(result.message)
+      setSuccess("Login successful! Now redirecting...")
+      router.replace(redirect)
+    } catch (error) {
+      setError(error.message)
     }
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-transparent border-0 shadow-none">
+      <SafeImage src="/logo.png" width={180} height={70} className="md:hidden w-[160px] h-[55px] text-center mx-auto m-5" alt={"logo"} />
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Customer Login</CardTitle>
+        <CardTitle className="text-xl font-bold text-center">Login</CardTitle>
         <CardDescription className="text-center">
           {otpSent ? "Enter the OTP sent to your phone" : "Login with your phone number"}
         </CardDescription>
@@ -94,17 +128,22 @@ console.log('result',result)
         {!otpSent ? (
           <form onSubmit={handleSendOtp} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone" className="font-semibold">Phone Number</Label>
               <Input
                 id="phone"
                 type="tel"
-                placeholder="Enter your phone number"
+                placeholder="Enter registered phone number"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-pink-600 hover:bg-pink-700" disabled={isLoading}>
+            <div className="text-xs text-muted-foreground px-1">
+              By continuing, you agree to our{" "}
+              <Link href="/terms" className="text-primary underline">Terms & Conditions</Link>{" "}
+              and <Link href="/privacy_policy" className="text-primary underline">Privacy Policy</Link>. You must be 18+.
+            </div>
+            <Button type="submit" className="w-full bg-primary hover:bg-primary-500" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -130,7 +169,7 @@ console.log('result',result)
               />
               <p className="text-xs text-gray-500">We sent a verification code to {phone}</p>
             </div>
-            <Button type="submit" className="w-full bg-pink-600 hover:bg-pink-700" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-primary hover:bg-primary-500" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -140,14 +179,27 @@ console.log('result',result)
                 "Verify & Login"
               )}
             </Button>
-            <div className="text-center">
+            <div className="flex flex-col items-center space-y-2">
               <button
                 type="button"
                 onClick={() => setOtpSent(false)}
-                className="text-sm text-pink-600 hover:underline"
+                className="text-sm text-bg-primary-600 hover:underline"
               >
                 Change phone number
               </button>
+              {!canResendOtp ? (
+                <p className="text-sm text-muted-foreground">
+                  Resend OTP in {timer} second{timer !== 1 && "s"}
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  className="text-sm text-primary-600 hover:underline"
+                >
+                  Resend OTP
+                </button>
+              )}
             </div>
           </form>
         )}
@@ -155,7 +207,7 @@ console.log('result',result)
       <CardFooter className="flex justify-center">
         <p className="text-sm text-gray-600">
           Don&apos;t have an account?{" "}
-          <Link href="/auth/register" className="text-pink-600 hover:text-pink-500">
+          <Link href="/auth/register" className="text-primary-600 hover:text-primary-500">
             Register now
           </Link>
         </p>

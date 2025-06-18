@@ -1,267 +1,224 @@
 "use client"
 
+import CategoryCircles from "@/app/components/category-circles"
+import CategoryPageSkeleton from "@/app/components/category-page-skeleton"
+import CategoryPageSkeletonDesktop from "@/app/components/category-page-skelton-dekstop"
+import EmptyProductState from "@/app/components/empty-product"
+import FacetFilter from "@/app/components/facet_filter"
 import FilterAccordionItem from "@/app/components/FilterAccordion"
+import FilterAccordionItemRadio from "@/app/components/FilterAccordionRadio"
 import ProductCard from "@/app/components/product-card"
-import { useMediaQuery } from "@/app/hooks/use-mobile"
-import { cn, formatCurrency } from "@/app/lib/utils"
+import { formatCurrency } from "@/app/lib/utils"
 
 import { Button } from "@/components/ui/button"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem } from "@/components/ui/pagination"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Slider } from "@/components/ui/slider"
+import { image_base_url } from "@/contant"
+import { useMobile } from "@/hooks/use-mobile"
 import { fetchFacetOptions, fetchFilterOptions, fetchProductsByCategory } from "@/lib/api"
-import { useQuery } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight, Filter, SlidersHorizontal, X } from "lucide-react"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { Check, Filter, SlidersHorizontal, SortAsc, X } from "lucide-react"
+import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-const FilterContentSkeleton = () => {
-  return (
-    <div className="space-y-6 animate-pulse">
-      {/* Header Skeleton */}
-      <div className="flex items-center justify-between">
-        <div className="h-5 w-24 bg-muted rounded" />
-        <div className="h-8 w-16 bg-muted rounded" />
-      </div>
-
-      {/* Price Range Skeleton */}
-      <div>
-        <div className="h-5 w-28 bg-muted rounded mb-2" />
-        <div className="h-4 w-full bg-muted rounded" />
-        <div className="flex items-center justify-between mt-2 text-sm">
-          <div className="h-4 w-12 bg-muted rounded" />
-          <div className="h-4 w-12 bg-muted rounded" />
-        </div>
-      </div>
-
-      {/* Accordion Skeleton */}
-      <div className="space-y-4">
-        {/* Categories */}
-        <div>
-          <div className="h-5 w-24 bg-muted rounded mb-2" />
-          <div className="space-y-2">
-            {[...Array(4)].map((_, idx) => (
-              <div key={idx} className="h-4 w-full bg-muted rounded" />
-            ))}
-          </div>
-        </div>
-
-        {/* Brands */}
-        <div>
-          <div className="h-5 w-24 bg-muted rounded mb-2" />
-          <div className="space-y-2">
-            {[...Array(4)].map((_, idx) => (
-              <div key={idx} className="h-4 w-full bg-muted rounded" />
-            ))}
-          </div>
-        </div>
-
-        {/* Ratings */}
-        <div>
-          <div className="h-5 w-24 bg-muted rounded mb-2" />
-          {[...Array(3)].map((_, idx) => (
-            <div key={idx} className="flex items-center space-x-2">
-              <div className="h-4 w-4 bg-muted rounded" />
-              <div className="h-4 w-32 bg-muted rounded" />
-            </div>
-          ))}
-        </div>
-
-        {/* Discounts */}
-        <div>
-          <div className="h-5 w-24 bg-muted rounded mb-2" />
-          {[...Array(3)].map((_, idx) => (
-            <div key={idx} className="flex items-center space-x-2">
-              <div className="h-4 w-4 bg-muted rounded" />
-              <div className="h-4 w-24 bg-muted rounded" />
-            </div>
-          ))}
-        </div>
+const FilterContentSkeleton = () => (
+  <div className="space-y-6 animate-pulse">
+    <div className="flex items-center justify-between">
+      <div className="h-5 w-24 bg-muted rounded" />
+      <div className="h-8 w-16 bg-muted rounded" />
+    </div>
+    <div>
+      <div className="h-5 w-28 bg-muted rounded mb-2" />
+      <div className="h-4 w-full bg-muted rounded" />
+      <div className="flex items-center justify-between mt-2 text-sm">
+        <div className="h-4 w-12 bg-muted rounded" />
+        <div className="h-4 w-12 bg-muted rounded" />
       </div>
     </div>
-  )
-}
+    <div className="space-y-4">
+      {[...Array(4)].map((_, idx) => (
+        <div key={idx}>
+          <div className="h-5 w-24 bg-muted rounded mb-2" />
+          <div className="space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-4 w-full bg-muted rounded" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)
 
-// Sort options
-const sortOptions = [
-  // { value: "featured", label: "Featured" },
-  // { value: "newest", label: "Newest Arrivals" },
+const SORT_OPTIONS = [
   { value: "price-low-high", label: "Price: Low to High" },
   { value: "price-high-low", label: "Price: High to Low" },
   { value: "rating", label: "Highest Rated" },
+]
+
+const RATING_VALUES = [
+  { id: "1", name: "1" },
+  { id: "2", name: "2" },
+  { id: "3", name: "3" },
+  { id: "4", name: "4" },
+  { id: "5", name: "5" },
+]
+
+const DISCOUNT_VALUES = [
+  { id: "10", name: "10% and above" },
+  { id: "20", name: "20% and above" },
+  { id: "30", name: "30% and above" },
+  { id: "40", name: "40% and above" },
+  { id: "50", name: "50% and above" },
+  { id: "60", name: "60% and above" },
+  { id: "70", name: "70% and above" },
+  { id: "80", name: "80% and above" },
+  { id: "90", name: "90% and above" },
 ]
 
 type CategoryPageProps = {
   slug: string
 }
 
+const Breadcrumb = ({ breadcrumbs }: { breadcrumbs: any[] }) => (
+  <nav className="flex text-sm text-gray-700" aria-label="Breadcrumb">
+    <ol className="inline-flex items-center space-x-1">
+      {breadcrumbs.map((crumb, index) => (
+        <li key={crumb.slug} className="inline-flex items-center">
+          {index !== 0 && (
+            <svg className="w-4 h-4 mx-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7.05 4.05a1 1 0 011.414 0L13 8.586l-4.536 4.536a1 1 0 11-1.414-1.414L10.586 9 7.05 5.464a1 1 0 010-1.414z" />
+            </svg>
+          )}
+          {index === breadcrumbs.length - 1 ? (
+            <span className="text-gray-500">{crumb.name}</span>
+          ) : (
+            <Link href={`/category/${crumb.slug}`} className="text-gray-700 hover:text-primary">
+              {crumb.name}
+            </Link>
+          )}
+        </li>
+      ))}
+    </ol>
+  </nav>
+)
+
+const BottomActions = ({ onFilterOpen, onSortOpen }: {
+  onFilterOpen: () => void,
+  onSortOpen: () => void
+}) => (
+  <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between gap-4 z-50">
+    <Button className="w-full" variant="outline" onClick={onFilterOpen}>
+      <Filter className="w-4 h-4 mr-2" /> Filter
+    </Button>
+    <Button className="w-full" variant="outline" onClick={onSortOpen}>
+      <SortAsc className="w-4 h-4 mr-2" /> Sort By
+    </Button>
+  </div>
+)
+
 export default function CategoryPage({ slug }: CategoryPageProps) {
   const [sortBy, setSortBy] = useState("price-low-high")
-  const [totalPages, setTotalPages] = useState(0)
   const [priceRange, setPriceRange] = useState([0, 100000])
-
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [filterOptions, setFilterOptions] = useState<any>({})
-  const [facetOptions, setFacetOptions] = useState<any>({})
+  const [sortOpen, setSortOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [selectedAttribute, setSelectedAttribute] = useState<string | null>(null)
-  const [filterParams, setFilterParams] = useState<{ [key: string]: string[] }>({})
-
-  const [pagination, setPagination] = useState({
-    current_page: 1,
-    total_pages: 1,
-    total_products: 0,
-    next_page: null,
-    prev_page: null,
-  })
-  const limit = 1
-  const rating_values = useMemo(() => [
-  { id: "1", name: "1" },
-  { id: "2", name: "2" },
-  { id: "3", name: "3" },
-  { id: "4", name: "4" },
-  { id: "5", name: "5" },
-], []);
-  const discount_values = useMemo(()=>[
-    { id: "10", name: "10% and  above" },
-    { id: "20", name: "20% and  above" },
-    { id: "30", name: "30% and  above" },
-    { id: "40", name: "40% and  above" },
-    { id: "50", name: "50% and  above" },
-    { id: "60", name: "60% and  above" },
-    { id: "70", name: "70% and  above" },
-    { id: "80", name: "80% and  above" },
-    { id: "90", name: "90% and  above" },
-  ],[])
-
+  const [filterParams, setFilterParams] = useState<Record<string, any[]>>({})
   const sidebarRef = useRef<HTMLDivElement>(null)
-  const [sidebarHeight, setSidebarHeight] = useState(0)
-  const [facetQueryString, setFacetQueryString] = useState<any>('')
-  const [headerHeight, setHeaderHeight] = useState(80) // Default header height
+  const [headerHeight, setHeaderHeight] = useState(80)
+  const isMobile = useMobile()
 
-  // Calculate sidebar dimensions on mount and resize
-  useEffect(() => {
-    const calculateDimensions = () => {
-      if (sidebarRef.current) {
-        setSidebarHeight(sidebarRef.current.scrollHeight)
-      }
-
-      // Try to get header height - assuming header has an ID or class
-      const header = document.querySelector("header")
-      if (header) {
-        setHeaderHeight(header.clientHeight)
-      }
-    }
-
-    calculateDimensions()
-    window.addEventListener("resize", calculateDimensions)
-
-    return () => {
-      window.removeEventListener("resize", calculateDimensions)
-    }
-  }, [])
-  const {
-    data: facet_options,
-
-  } = useQuery({
-    queryKey: ["facet_options",slug],
+  const { data: facet_options, isLoading: isLoadingFacetOptions, } = useQuery({
+    queryKey: ["facet_options", slug],
     queryFn: () => fetchFacetOptions(slug),
-    staleTime:0,
-     enabled: !!slug
-
+    staleTime: 60_000,
+    enabled: !!slug
   })
-  console.log('facedt',facet_options)
+
   const {
     data: options,
     isLoading: isLoadingOptions,
-    isFetching: isFetchingOptions,
-    isError: isOptionsError,
+    isError: isOptionsError
   } = useQuery({
     queryKey: ["filter_options", slug],
-    queryFn: () => fetchFilterOptions(slug as string, limit),
-    enabled: !!slug, // only fetch when slug is available
+    queryFn: () => fetchFilterOptions(slug, 40),
+    enabled: !!slug,
   })
-  console.log('fad',facet_options )
-  const filterString: string = useMemo(() => {
-    const params = new URLSearchParams();
+
+  const { breadcrumbs } = options || {}
+  const filterString = useMemo(() => {
+    const params = new URLSearchParams()
+    params.append("sort_by", sortBy)
+    //  params.append("page", page.toString())
+    params.append("limit", "20")
+
+    if (priceRange[0] !== null) params.append("minPrice", priceRange[0].toString())
+    if (priceRange[1] !== null) params.append("maxPrice", priceRange[1].toString())
 
     for (const [key, values] of Object.entries(filterParams)) {
-      if (Array.isArray(values) && values.length > 0) {
-        const ids = values.map((v: any) => v.id).join(',');
-        params.append(encodeURIComponent(key), encodeURIComponent(ids));
+      if (values?.length) {
+        params.append(key, values.map(v => v.id).join(','))
       }
     }
 
-    if (priceRange[0] != null) {
-      params.append("minPrice", encodeURIComponent(priceRange[0].toString()));
-    }
+    return params.toString()
+  }, [priceRange, filterParams, sortBy])
 
-    if (priceRange[1] != null) {
-      params.append("maxPrice", encodeURIComponent(priceRange[1].toString()));
-    }
-
-    params.append("sort_by", encodeURIComponent(sortBy));
-    params.append("page", encodeURIComponent(page.toString()));
-    params.append("limit", encodeURIComponent(limit.toString()));
-
-    return params.toString();
-  }, [priceRange, filterParams, sortBy, page, limit]);
   const {
     data: product_list,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading: isLoadingProducts,
     isFetching: isFetchingProducts,
-    isError: isProductsError,
-  } = useQuery({
+  } = useInfiniteQuery({
     queryKey: ["products", slug, filterString],
-    queryFn: () => fetchProductsByCategory(slug as string, filterString),
+    queryFn: ({ pageParam }) => fetchProductsByCategory(slug, filterString, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+
+      if (lastPage.current_page < lastPage.total_pages) {
+        return parseInt(lastPage.current_page) + 1;
+      }
+      return undefined;
+    },
     enabled: !!slug && !!options,
-  // Added staleTime to prevent unnecessary refetches
-  staleTime: 30000 // only fetch when slug is available
-  })
+    staleTime: 30000,
+  });
 
-  const isMobile = useMediaQuery("(max-width: 768px)")
-  const resetFilters = () => {
-    setPriceRange([filterOptions.priceRange.min, filterOptions.priceRange.max])
-    setFilterParams({})
-  }
-  useEffect(() => {
-    let updated_filter: any = {}
-
-    if (options) {
-      updated_filter = { ...updated_filter, categories: options.child_categories_list }
-      updated_filter = { ...updated_filter, brands: options.brand_list }
-      updated_filter = { ...updated_filter, priceRange: options.price_range }
-      updated_filter = { ...updated_filter, discounts: discount_values }
-      updated_filter = { ...updated_filter, sizes: options.sizes_list }
-      updated_filter = { ...updated_filter, colors: options.colors_list }
-      updated_filter = { ...updated_filter, age_groups: options.age_groups_list }
-      updated_filter = { ...updated_filter, ratings: rating_values }
-      updated_filter = { ...updated_filter, page: page }
-      setPriceRange([options.price_range.min, options.price_range.max])
+  const child_cats = useMemo(() => options?.child_categories_list || [], [options])
+  const filterOptions = useMemo(() => {
+    if (!options) return null
+    return {
+      categories: options.child_categories_list,
+      brands: options.brand_list,
+      priceRange: options.price_range,
+      discounts: DISCOUNT_VALUES,
+      sizes: options.sizes_list,
+      colors: options.colors_list,
+      ratings: RATING_VALUES,
     }
-    //if(isLoadingOptions)
-    setFilterOptions({ ...filterOptions, ...updated_filter })
-  }, [options, page])
-console.log('ppoo',options)
+  }, [options])
 
-  const FilterContent = useCallback(() => {
+  const handleOptionChange = useCallback((attribute: string, option: any) => {
+    setFilterParams(prev => {
+      const current = prev[attribute] || []
+      const exists = current.some((v: any) => v.id === option.id)
 
-    if (!facet_options
-    ) {
-      return <FilterContentSkeleton />
-    }
+      return {
+        ...prev,
+        [attribute]: exists
+          ? current.filter((v: any) => v.id !== option.id)
+          : [...current, option]
+      }
+    })
+  }, [])
 
-    let filterSections = [
-
-      { key: "categories", title: "Categories", options: filterOptions.categories },
-      { key: "brands", title: "Brands", options: filterOptions.brands },
-      { key: "discounts", title: "Discounts", options: filterOptions.discounts },
-      { key: "ratings", title: "Ratings", options: filterOptions.ratings },
-      { key: "sizes", title: "Sizes", options: filterOptions.sizes },
-     ]
-   const  mobilefilterSections = [...filterSections, ...facet_options];
-    const handleMultiOptionChange = (attribute: string, selectedOptions: any[]) => {
-       setFilterParams(prev => {
+  const handleMultiOptionChange = (attribute: string, selectedOptions: any[]) => {
+    console.log('selectedOptions', selectedOptions)
+    setFilterParams(prev => {
       const existingOptions = prev[attribute] || [];
 
       // Merge selectedOptions into existingOptions, avoiding duplicates by `id`
@@ -269,159 +226,201 @@ console.log('ppoo',options)
         ...existingOptions.filter(
           (existing: any) => !selectedOptions.some((selected: any) => selected.id === existing.id)
         ),
-      ...selectedOptions
-    ];
+        ...selectedOptions
+      ];
 
-    return {
-      ...prev,
-      [attribute]: merged,
-    };
-  });
-};
+      return {
+        ...prev,
+        [attribute]: merged,
+      };
+    });
+  };
+  const handleMultiOptionChangeRadio = (attribute: string, selectedOption: any) => {
+    console.log('selectedOptions', selectedOption)
+    let t = {}
+    t[attribute] = selectedOption
+    setFilterParams(prev => {
 
-   const handleOptionChange = (attribute: string, option: any) => {
-
-  // Ensure `option` is a single object, not an array
- 
-
-  setFilterParams(prev => {
-    const currentOptions = prev[attribute] || [];
-
-    const newOptions = currentOptions.some((op: any) => op.id === option.id)
-      ? currentOptions.filter((o: any) => o.id !== option.id)
-      : [...currentOptions, option];
-
-    return {
-      ...prev,
-      [attribute]: newOptions,
-    };
-  });
-};
-
-
-    const selectedSection = mobilefilterSections.find(section => section.key === selectedAttribute)
-    return isMobile ? (
-      <div className="flex h-full border rounded shadow-sm">
-        {/* Left Navigation Rail */}
-        <div className="w-1/3 max-w-[250px] border-r overflow-y-auto bg-gray-50">
-          <ul className="divide-y">
-            {mobilefilterSections.map(section => (
-              <li
-                key={section.key}
-                className={`px-4 py-3 cursor-pointer hover:bg-gray-100 ${selectedAttribute === section.key ? "bg-white font-semibold" : ""
-                  }`}
-                onClick={() => setSelectedAttribute(section.key)}
-              >
-                {section.title}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Right: Options for selected attribute */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {selectedSection ? (
-            <div>
-              <h3 className="text-xl font-semibold mb-4">{selectedSection.title}</h3>
-              <div className="space-y-2">
-                {selectedSection.options.map((option: any, index: number) => {
-
-                  const isChecked = filterParams[selectedSection.key]?.some((op: any) => op.id === option.id)
-                  return (
-                    <label key={option.name} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleOptionChange(selectedSection.key, option)}
-                      />
-                      <span>{option.name}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          ) :
-            <p className="text-gray-500">Select a filter attribute from the left panel.</p>
-          }
-        </div>
-      </div>
-    ) : (<div>
-      {filterSections.map((section) => (
-        <FilterAccordionItem
-          key={section.key}
-          value={section.key}
-          title={section.title}
-          options={section.options}
-          onChange={(selected: any) => handleMultiOptionChange (section.key, selected)}
-          showSearch={true}
-        />
-      ))}
-
-
-
-    </div>)
-  }, [selectedAttribute, isMobile, setSelectedAttribute, setFilterParams,
-     filterOptions, facet_options])
-
-
-  const categoryName = slug
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-
-
-
-  const handleRemoveFilter = useCallback((type: any, idToRemove: any) => {
-    const updated: any = { ...filterParams }
-    if (idToRemove) {
-      updated[type] = updated[type].filter(item => item.id !== idToRemove)
-
-      // Optionally remove the key if the array becomes empty
-      if (updated[type].length === 0) {
-        delete updated[type]
+      return {
+        ...prev,
+        [attribute]: [selectedOption],
+      };
+    });
+  };
+  console.log('filter para;s', filterParams)
+  const handleRemoveFilter = useCallback((type: string, idToRemove: string) => {
+    setFilterParams(prev => {
+      const updated = { ...prev }
+      if (updated[type]) {
+        updated[type] = updated[type].filter(item => item.id !== idToRemove)
+        if (!updated[type].length) delete updated[type]
       }
-      setFilterParams(updated)
+      return updated
+    })
+  }, [])
+
+  const resetFilters = useCallback(() => {
+    if (filterOptions) {
+      setPriceRange([filterOptions.priceRange.min, filterOptions.priceRange.max])
     }
-  }, [filterParams])
-  const paginate = (pageNumber: number) => {
-    setPage(pageNumber)
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-  if (isLoadingOptions)
+    setFilterParams({})
+  }, [filterOptions])
+
+  useEffect(() => {
+    const calculateDimensions = () => {
+      if (sidebarRef.current) {
+        const header = document.querySelector("header")
+        if (header) setHeaderHeight(header.clientHeight)
+      }
+    }
+
+    calculateDimensions()
+    window.addEventListener("resize", calculateDimensions)
+    return () => window.removeEventListener("resize", calculateDimensions)
+  }, [])
+
+  useEffect(() => {
+    if (options?.price_range) {
+      setPriceRange([options.price_range.min, options.price_range.max])
+    }
+  }, [options])
+
+  const FilterContent = useCallback(() => {
+    if (!filterOptions) return <FilterContentSkeleton />
+
+    const filterSections = [
+      { key: "categories", title: "Categories", options: filterOptions.categories },
+      { key: "brands", title: "Brands", options: filterOptions.brands },
+      { key: "discounts", title: "Discounts", options: filterOptions.discounts },
+      { key: "ratings", title: "Ratings", options: filterOptions.ratings },
+      { key: "sizes", title: "Sizes", options: filterOptions.sizes },
+    ]
+
+    const mobileSections = facet_options
+      ? [...filterSections, ...facet_options]
+      : [...filterSections]
+
+    const selectedSection = mobileSections.find(s => s.key === selectedAttribute)
+
+    if (isMobile) {
+      return (
+        <div className="flex h-full border rounded shadow-sm">
+          <div className="w-1/3 max-w-[250px] border-r overflow-y-auto bg-gray-50">
+            <ul className="divide-y">
+              {mobileSections.map(section => (
+                section.options?.length > 0 && (
+                  <li
+                    key={section.key}
+                    className={`px-4 py-3 cursor-pointer hover:bg-gray-100 ${selectedAttribute === section.key ? "bg-white font-semibold" : ""
+                      }`}
+                    onClick={() => setSelectedAttribute(section.key)}
+                  >
+                    {section.title}
+                  </li>
+                )
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {selectedSection ? (
+              <div>
+                <h3 className="text-xl font-semibold mb-4">{selectedSection.title}</h3>
+                <div className="space-y-2">
+                  {selectedSection.options.map((option: any) => {
+                    const isChecked = filterParams[selectedSection.key]?.some(
+                      (op: any) => op.id === option.id
+                    )
+                    return (
+                      <label key={option.id} className="flex items-center gap-2">
+                        <input
+                          type={['discounts','ratings'].includes(selectedSection.key)?'radio':"checkbox"}
+                          checked={isChecked}
+                          onChange={() => handleOptionChange(selectedSection.key, option)}
+                        />
+                        <span>{option.name}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500">Select a filter attribute</p>
+            )}
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      <>
+        {filterSections.map(
+          (section) =>
+            section.options?.length > 0 &&
+            (['discounts', 'ratings'].includes(section.key) ? (
+              <FilterAccordionItemRadio
+                key={section.key}
+                value={section.key}
+                title={section.title}
+                options={section.options}
+                selectedFilterParams={filterParams[section.key]}
+                onChange={(selected) => handleMultiOptionChangeRadio(section.key, selected)}
+                showSearch={true}
+              />
+            ) : (
+              <FilterAccordionItem
+                key={section.key}
+                value={section.key}
+                title={section.title}
+                options={section.options}
+                selectedFilterParams={filterParams[section.key]}
+                onChange={(selected) => handleMultiOptionChange(section.key, selected)}
+                showSearch={true}
+              />
+            ))
+        )}
+      </>
     )
-  const { products, current_page, total_pages, total_products, next_page, prev_page } = product_list || {}
-  const paginationButtonStyles = {
-    base: "h-9 min-w-9 flex items-center justify-center rounded-md border border-input text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-    active:
-      "bg-red-500 text-primary-foreground border-primary hover:bg-primary/90 hover:text-primary-foreground shadow-md shadow-primary/30 ring-2 ring-primary/30 font-medium scale-105 transform transition-transform",
-    inactive: "bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
-    disabled: "pointer-events-none opacity-50 bg-muted text-muted-foreground border-muted-foreground/20",
+  }, [filterOptions, facet_options, selectedAttribute, isMobile, filterParams])
+
+  if (isLoadingOptions || isLoadingFacetOptions) {
+    return isMobile ? <CategoryPageSkeleton /> : <CategoryPageSkeletonDesktop />
   }
+
+
+  const hasActiveFilters = Object.keys(filterParams).length > 0 ||
+    (filterOptions?.priceRange && (
+      priceRange[0] > filterOptions.priceRange.min ||
+      priceRange[1] < filterOptions.priceRange.max
+    ))
+  const allProducts =
+    product_list?.pages.flatMap((page) => page.products) ?? [];
   return (
-    <div className="container py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">{options !== undefined && options.categoryName}</h1>
-        <p className="text-muted-foreground">
-          Showing {product_list !== undefined && product_list.products.length} products
-        </p>
+    <div className="container px-2 pt-2 ">
+      <div className="mb-3 hidden md:block pt-2">
+        {breadcrumbs && <Breadcrumb breadcrumbs={breadcrumbs} />}
+        <h1 className="text-md md:text-xl font-bold">
+          {options?.categoryName || "Category"}
+        </h1>
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Filters - Desktop */}
+        {/* Desktop Filters */}
+        {child_cats.length > 0 && (
+          <div className="md:hidden">
+            <CategoryCircles categories={child_cats} />
+          </div>
+        )}
+
         <div className="hidden md:block w-64 flex-shrink-0">
           <div
             ref={sidebarRef}
-            className="sticky border rounded-lg p-4 bg-card shadow-sm"
-            style={{
-              top: `${headerHeight + 20}px`,
-              maxHeight: `calc(100vh - ${headerHeight + 40}px)`,
-              overflowY: "auto",
-              scrollbarWidth: "thin",
-            }}
+            className="border rounded-lg p-4 bg-card shadow-sm"
+          // style={{
+          //   top: `${headerHeight + 20}px`,
+          //   maxHeight: `calc(100vh - ${headerHeight + 40}px)`,
+          //   overflowY: "auto",
+          // }}
           >
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -435,47 +434,42 @@ console.log('ppoo',options)
                   Reset
                 </Button>
               </div>
-              {isLoadingOptions ? (
-                <div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-              ) : (
-                <div>
+
+              {filterOptions ? (
+                <>
                   <h4 className="font-medium mb-6 text-sm">Price Range</h4>
                   <div className="px-2 !text-xs mb-3">
-                    {filterOptions.priceRange !== undefined && (
-                      <>
-                        <Slider
-                          min={filterOptions.priceRange.min}
-                          max={filterOptions.priceRange.max}
-                          step={1}
-                          value={priceRange}
-                          defaultValue={priceRange}
-                          onValueChange={setPriceRange}
-                        />
-                        <div className="flex items-center justify-between mt-4 text-xs">
-                          <span>{formatCurrency(priceRange[0])}</span>
-                          <span>{formatCurrency(priceRange[1])}</span>
-                        </div>
-                      </>
-                    )}
+                    <Slider
+                      min={filterOptions.priceRange.min}
+                      max={filterOptions.priceRange.max}
+                      step={1}
+                      value={priceRange}
+                      onValueChange={setPriceRange}
+                    />
+                    <div className="flex items-center justify-between mt-4 text-xs">
+                      <span>{formatCurrency(priceRange[0])}</span>
+                      <span>{formatCurrency(priceRange[1])}</span>
+                    </div>
                   </div>
                   <FilterContent />
-                </div>
+                </>
+              ) : (
+                <FilterContentSkeleton />
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex-1">
-          {/* Filters and Sort - Mobile */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="md:hidden">
-              <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFilterOpen(true)}>
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-            </div>
+        {/* Main Content */}
+        <div className="flex-1 -mt-10">
+          <div className="hidden md:flex items-center justify-between mb-2">
+            {facet_options && (
+              <FacetFilter
+                attributes={facet_options}
+                onFilterChange={handleMultiOptionChange}
+                selectedParams={filterParams}
+              />
+            )}
 
             <div className="flex items-center ml-auto">
               <div className="flex items-center mr-2 text-sm text-muted-foreground">
@@ -487,7 +481,7 @@ console.log('ppoo',options)
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sortOptions.map((option) => (
+                  {SORT_OPTIONS.map(option => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -498,159 +492,126 @@ console.log('ppoo',options)
           </div>
 
           {/* Active Filters */}
-          {(Object.keys(filterParams).length > 0 ||
-            (filterOptions.priceRange && (priceRange[0] > filterOptions.priceRange.min || priceRange[1] < filterOptions.priceRange.max))) && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {filterOptions.priceRange &&
-                  (priceRange[0] > filterOptions.priceRange.min || priceRange[1] < filterOptions.priceRange.max) && (
-                    <div className="flex items-center bg-muted text-sm rounded-full px-3 py-1">
-                      <span>
-                        Price: {formatCurrency(priceRange[0])} - {formatCurrency(priceRange[1])}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0 ml-1"
-                        onClick={() => setPriceRange([filterOptions.priceRange.min, filterOptions.priceRange.max])}
-                      >
-                        <X className="h-3 w-3" />
-                        <span className="sr-only">Remove price filter</span>
-                      </Button>
-                    </div>
-                  )}
-                {Object.keys(filterParams).map((key: any) => {
-                   console.log('dekho',filterParams)
-                  const cat: any[] = filterParams[key];
+          {hasActiveFilters && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {filterOptions?.priceRange && (
+                priceRange[0] > filterOptions.priceRange.min ||
+                priceRange[1] < filterOptions.priceRange.max
+              ) && (
+                  <div className="flex items-center bg-muted text-sm rounded-full px-3 py-1">
+                    <span>
+                      Price: {formatCurrency(priceRange[0])} - {formatCurrency(priceRange[1])}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 ml-1"
+                      onClick={() => setPriceRange([
+                        filterOptions.priceRange.min,
+                        filterOptions.priceRange.max
+                      ])}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
 
-                  if (!Array.isArray(cat) || cat.length === 0) return null;
-                  
-                  return cat.map((op: any, index: number) => {
-                   
-                    return (
-                      <div key={op.id + '-' + index} className="flex items-center bg-muted text-sm rounded-full px-3 py-1">
-                        <span>{op.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 w-5 p-0 ml-1"
-                          onClick={() => handleRemoveFilter(key, op.id)}
-                        >
-                          <X className="h-3 w-3" />
-                          <span className="sr-only">Remove {key} filter</span>
-                        </Button>
-                      </div>
-                    );
-                  });
-                })}
+              {Object.entries(filterParams).map(([key, values]) =>
+                values.map((op: any) => (
+                  <div key={`${key}-${op.id}`} className="flex items-center bg-muted text-sm rounded-full px-3 py-1">
+                    <span>{op.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 ml-1"
+                      onClick={() => handleRemoveFilter(key, op.id)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))
+              )}
 
-
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={resetFilters}>
-                  Clear All
-                </Button>
-              </div>
-            )}
-
-          {/* Products Grid */}
-          {isLoadingProducts || isFetchingProducts ? (
-            <div className="flex items-center justify-center h-screen">
-              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={resetFilters}
+              >
+                Clear All
+              </Button>
             </div>
+          )}
+
+          {/* Product Grid */}
+          {isLoadingProducts || (isFetchingProducts && !isFetchingNextPage) ? (
+            /* ▸ ❶ First load / refetch spinner */
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+            </div>
+          ) : !allProducts.length ? (
+            /* ▸ ❷ Empty state */
+            <EmptyProductState />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {product_list &&
-                product_list.products.map((product: any) => <ProductCard key={product.id} {...product} />)}
+            /* ▸ ❸ Product grid (all pages flattened) */
+            <div className="mb-5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-1">
+              {allProducts.map((product) => (
+                <ProductCard key={product.id} {...product}
+                  image={`${image_base_url}/storage/products/${product.id}/${product.image}`}
+                />
+              ))}
             </div>
           )}
-          {total_pages > 1 && (
+
+          {hasNextPage && (
+            <div className="flex justify-center my-6">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="flex items-center gap-3 px-6 py-1 bg-primary text-white  disabled:opacity-60"
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <span>Loading</span>
+                    <span className="flex space-x-1">
+                      <span className="w-2 h-2 bg-white rounded-full animate-ping-slow [animation-delay:0s]"></span>
+                      <span className="w-2 h-2 bg-white rounded-full animate-ping-slow [animation-delay:0.15s]"></span>
+                      <span className="w-2 h-2 bg-white rounded-full animate-ping-slow [animation-delay:0.3s]"></span>
+                    </span>
+                  </>
+                ) : (
+                  'Load More'
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {/* {total_pages > 1 && (
             <div className="flex justify-center mt-8 mb-4">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <button
-                      onClick={() => {
-                        if (page > 1) paginate(page - 1)
-                      }}
-                      className={cn(
-                        paginationButtonStyles.base,
-                        page === 1 ? paginationButtonStyles.disabled : paginationButtonStyles.inactive,
-                        "px-2.5",
-                      )}
-                      disabled={page === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      <span className="sr-only">Previous</span>
-                    </button>
-                  </PaginationItem>
-
-                  {Array.from({ length: total_pages }).map((_, index) => {
-                    const pageNumber = index + 1
-
-                    // Show first page, last page, current page, and pages around current page
-                    if (
-                      pageNumber === 1 ||
-                      pageNumber === total_pages ||
-                      (pageNumber >= page - 1 && pageNumber <= page + 1)
-                    ) {
-                      return (
-                        <PaginationItem key={pageNumber}>
-                          <button
-                            onClick={() => paginate(pageNumber)}
-                            className={cn(
-                              paginationButtonStyles.base,
-                              pageNumber === page
-                                ? `${paginationButtonStyles.active} animate-pulse-subtle`
-                                : paginationButtonStyles.inactive,
-                            )}
-                            aria-current={pageNumber === page ? "page" : undefined}
-                          >
-                            {pageNumber}
-                          </button>
-                        </PaginationItem>
-                      )
-                    }
-
-                    // Show ellipsis for gaps
-                    if ((pageNumber === 2 && page > 3) || (pageNumber === total_pages - 1 && page < total_pages - 2)) {
-                      return (
-                        <PaginationItem key={`ellipsis-${pageNumber}`}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      )
-                    }
-
-                    return null
-                  })}
-
-                  <PaginationItem>
-                    <button
-                      onClick={() => {
-                        if (page < total_pages) paginate(page + 1)
-                      }}
-                      className={cn(
-                        paginationButtonStyles.base,
-                        page === total_pages ? paginationButtonStyles.disabled : paginationButtonStyles.inactive,
-                        "px-2.5",
-                      )}
-                      disabled={page === total_pages}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                      <span className="sr-only">Next</span>
-                    </button>
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              <Pagination 
+                currentPage={current_page || 1} 
+                totalPages={total_pages || 1} 
+                onPageChange={setPage} 
+              />
             </div>
-          )}
+          )} */}
         </div>
       </div>
 
+      {/* Mobile Actions */}
+      <BottomActions
+        onFilterOpen={() => setIsFilterOpen(true)}
+        onSortOpen={() => setSortOpen(true)}
+      />
+
       {/* Mobile Filter Sheet */}
       <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl">
-          <SheetHeader className="border-b pb-4 mb-4">
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl py-5 px-0">
+          <SheetHeader className="border-b p-4">
             <SheetTitle className="text-left">Filters</SheetTitle>
           </SheetHeader>
-          <div className="overflow-y-auto h-full pb-20">
+          <div className="overflow-y-auto h-full">
             <FilterContent />
           </div>
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
@@ -662,6 +623,32 @@ console.log('ppoo',options)
                 Apply Filters
               </Button>
             </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Mobile Sort Sheet */}
+      <Sheet open={sortOpen} onOpenChange={setSortOpen}>
+        <SheetContent side="bottom" className="space-y-4 pb-8">
+          <SheetHeader>
+            <SheetTitle className="text-center">Sort By</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-3">
+            {SORT_OPTIONS.map(option => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  setSortBy(option.value)
+                  setSortOpen(false)
+                }}
+                className="w-full flex items-center text-left px-4 py-2 rounded-md hover:bg-gray-100 transition"
+              >
+                <div className="w-5">
+                  {sortBy === option.value && <Check className="w-4 h-4 text-green-500" />}
+                </div>
+                <span className="ml-2">{option.label}</span>
+              </button>
+            ))}
           </div>
         </SheetContent>
       </Sheet>

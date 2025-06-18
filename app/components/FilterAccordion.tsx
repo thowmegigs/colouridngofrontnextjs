@@ -2,7 +2,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Star } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 interface FilterOption {
   id: string;
@@ -14,7 +14,7 @@ interface Props {
   value: string;
   title: string;
   options: FilterOption[];
-
+selectedFilterParams:any,
   onChange: (selected: any) => void;
   showSearch?: boolean;
 }
@@ -23,8 +23,8 @@ const FilterAccordionItem: React.FC<Props> = ({
   value,
   title,
   options,
-
   onChange,
+  selectedFilterParams,
   showSearch = true,
 }) => {
 
@@ -32,6 +32,10 @@ const FilterAccordionItem: React.FC<Props> = ({
   const [acvalue, setAcValue] = useState(value);
   const [selected, setSelected] = useState<any>([]);
   const [selectedIds, setSelectedIds] = useState<any[]>([]);
+  useEffect(()=>{
+    const ids=selectedFilterParams?selectedFilterParams.map((v)=>(v.id)):[]
+    setSelectedIds([...ids])
+  },[selectedFilterParams])
   const filteredOptions = useMemo(() => {
     return search.length > 0 ? options.filter((opt) => {
       let name: any = opt.name;
@@ -40,21 +44,25 @@ const FilterAccordionItem: React.FC<Props> = ({
     }
     ) : options;
   }, [search, options]);
-  const handleChange = (checked: boolean, item: any) => {
+  const handleChange = useCallback((checked: boolean, item: any) => {
+ 
     if (checked) {
       selected.push(item)
       setSelected([...selected])
+
       setSelectedIds([...selectedIds, item.id])
+       onChange([...selected])
     }
     else {
       const filteredArray = selected.filter((obj: any) => obj.id !== item.id);
       setSelected([...filteredArray])
+       onChange([...filteredArray])
       const filteredArray1 = selectedIds.filter((i: any) => i !== item.id);
       setSelectedIds([...filteredArray1])
     }
-    onChange(selected)
-  }
-
+   
+  },[selected,selectedIds])
+console.log('slected ids ',selectedIds)
   return (
     <Accordion
       type="single"
@@ -69,6 +77,7 @@ const FilterAccordionItem: React.FC<Props> = ({
             {showSearch && (
               <input
                 type="text"
+               
                 placeholder={`Search ${title.toLowerCase()}...`}
                 className="w-full px-2 py-1 border border-gray-300 rounded-md text-xs"
                 value={search}
@@ -77,8 +86,10 @@ const FilterAccordionItem: React.FC<Props> = ({
                 onFocus={(e) => e.stopPropagation()}
               />
             )}
-            {filteredOptions && Array.isArray(filteredOptions) && filteredOptions.map((item, index) => (
-              <div key={index} className="flex items-center space-x-2">
+            {filteredOptions && Array.isArray(filteredOptions) && 
+            filteredOptions.map((item, index) => {
+              
+              return <div key={index} className="flex items-center space-x-2">
                 <Checkbox
                   id={item.id}
                   checked={selectedIds.includes(item.id)}
@@ -105,7 +116,7 @@ const FilterAccordionItem: React.FC<Props> = ({
                   </Label>
                 }
               </div>
-            ))}
+})}
           </div>
         </AccordionContent>
       </AccordionItem>

@@ -1,7 +1,7 @@
-import { RotateCcw, Truck, CreditCard, FileText } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import ReturnPolicy from "./components/return-policy"
+import { CreditCard, FileText, RotateCcw, Truck } from "lucide-react"
 import ReturnHistory from "./components/return-history"
+import ReturnPolicy from "./components/return-policy"
 
 export default function ReturnsPage() {
   return (
@@ -106,47 +106,47 @@ export default function ReturnsPage() {
         </Tabs>
 
         <div className="border rounded-lg overflow-hidden">
-          <div className="p-4 border-b bg-muted/30 flex items-center">
-            <FileText className="h-5 w-5 mr-2" />
-            <h2 className="font-medium">Terms & Conditions</h2>
-          </div>
-          <div className="p-6">
-            <div className="prose prose-sm max-w-none">
-              <p>By initiating a return, you agree to the following terms and conditions:</p>
+  <div className="p-4 border-b bg-muted/30 flex items-center">
+    <FileText className="h-5 w-5 mr-2" />
+    <h2 className="font-medium">Terms & Conditions</h2>
+  </div>
+  <div className="p-6">
+    <div className="prose prose-sm max-w-none">
+      <p>
+        By initiating a return, you agree to the following terms and conditions:
+      </p>
 
-              <ol className="list-decimal pl-5 space-y-2">
-                <li>All returns must be initiated within the eligible return period for your item category.</li>
-                <li>
-                  Items must be returned in their original condition, unused, unworn, and with all tags and packaging
-                  intact.
-                </li>
-                <li>
-                  For hygiene reasons, certain items like underwear, swimwear, and beauty products cannot be returned if
-                  the seal is broken or the item has been used.
-                </li>
-                <li>
-                  If you received a defective or damaged item, please contact customer service within 48 hours of
-                  delivery.
-                </li>
-                <li>Refunds will be issued to the original payment method used for the purchase.</li>
-                <li>
-                  Shipping costs are non-refundable unless the return is due to our error (wrong item shipped, defective
-                  product, etc.).
-                </li>
-                <li>
-                  For items purchased during sales or with promotional discounts, the refund amount will be based on the
-                  actual price paid.
-                </li>
-                <li>We reserve the right to refuse returns that do not meet our return policy requirements.</li>
-              </ol>
+      <ul className="list-disc pl-6 space-y-2 text-gray-700 text-base">
+        <li>
+          We have a <span className="font-medium">2-day return policy</span>, which means you have 2 days after receiving your item to request a return.
+        </li>
+        <li>
+          Once the returned product is received, it will be inspected and the return will be approved within 2 days.
+        </li>
+        <li>
+          We will notify you once we’ve received and inspected your return, and let you know if the refund was approved or not.
+        </li>
+        <li>
+          If approved, you’ll be automatically refunded on your original payment method within <span className="font-medium">10 business days</span> with all deductions.
+        </li>
+        <li>
+          Please remember it can take some time for your bank or credit card company to process and post the refund too.
+        </li>
+        <li>
+          If more than <span className="font-medium">15 business days</span> have passed since we’ve approved your return, please contact us.
+        </li>
+      </ul>
 
-              <p className="mt-4">
-                For any questions or concerns regarding returns, please contact our customer service team at
-                support@multivendor-marketplace.com.
-              </p>
-            </div>
-          </div>
-        </div>
+      <p className="mt-4">
+        For any questions or concerns regarding returns, please contact our customer service team at
+        <a href="mailto:support@multivendor-marketplace.com" className="text-indigo-600 underline ml-1">
+          support@multivendor-marketplace.com
+        </a>.
+      </p>
+    </div>
+  </div>
+</div>
+
       </div>
     </div>
   )

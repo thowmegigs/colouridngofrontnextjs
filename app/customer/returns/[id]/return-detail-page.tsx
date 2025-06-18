@@ -1,6 +1,6 @@
 "use client"
 
-import { formatCurrency, formatDate } from "@/app/lib/utils"
+import { formatCurrency, formatDate, getStatusColor } from "@/app/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +12,6 @@ import { cancelReturn, getReturnById } from "@/lib/return-api"
 import { useQuery } from "@tanstack/react-query"
 import {
   AlertCircle,
-  ArrowLeft,
   Calendar,
   CheckCircle,
   Clock,
@@ -22,7 +21,7 @@ import {
   RefreshCcw,
   Repeat,
   Truck,
-  XCircle,
+  XCircle
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -63,7 +62,10 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
         title: "Request cancelled",
         description: `Your ${data.type === "Exchange" ? "exchange" : "return"} request has been cancelled successfully.`,
       })
-      refetch()
+      setTimeout(()=>{
+         router.replace(`/customer/orders`)
+      },2000)
+    
     } catch (error) {
       toast({
         title: "Error",
@@ -98,15 +100,7 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
   }
 
   // Get color based on return status
-  const getStatusColor = (status: string) => {
-    if (status.includes("Requested")) return "bg-yellow-100 text-yellow-800"
-    if (status.includes("Approved")) return "bg-blue-100 text-blue-800"
-    if (status.includes("Processing")) return "bg-purple-100 text-purple-800"
-    if (status.includes("Completed")) return "bg-green-100 text-green-800"
-    if (status.includes("Cancelled")) return "bg-red-100 text-red-800"
-    if (status.includes("Rejected")) return "bg-red-100 text-red-800"
-    return "bg-gray-100 text-gray-800"
-  }
+  
 
   // Get color based on refund status
   const getRefundStatusColor = (status: string) => {
@@ -124,14 +118,8 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-          <Skeleton className="h-10 w-3/4 mb-2" />
-          <Skeleton className="h-6 w-1/2" />
-        </div>
+      <div className="container mx-auto p-0 m-0">
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2">
             <Skeleton className="h-[400px] w-full rounded-lg" />
@@ -146,10 +134,8 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
 
   if (isError) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
+      <div className="container mx-auto px-1">
+       
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -170,10 +156,8 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
 
   if (!data) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
+      <div className="container mx-auto ">
+       
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -192,35 +176,14 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
     )
   }
 
-  // Parse the return status updates from timelines
-  const statusUpdates: ReturnStatusUpdate[] = data.timelines || [
-    {
-      status: data.type === "Exchange" ? "Exchange Requested" : "Return Requested",
-      icon: data.type === "Exchange" ? "exchange" : "return",
-      notes: "",
-      date: data.created_at,
-    },
-  ]
 
-  // Get all images from all return items
-  const allImages: string[] = []
-  if (data.return_items && Array.isArray(data.return_items)) {
-    data.return_items.forEach((item) => {
-      if (item.first_image) allImages.push(item.first_image)
-      if (item.second_image) allImages.push(item.second_image)
-      if (item.third_image) allImages.push(item.third_image)
-      if (item.fourth_image) allImages.push(item.fourth_image)
-    })
-  }
+ 
 
   const isExchange = data.type === "Exchange"
-
+const statusUpdates=data?JSON.parse(data.return_status_updates):[]
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back
-      </Button>
-
+    <div className="container mx-auto p-0 m-0">
+     
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <Card>
@@ -228,17 +191,16 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <CardTitle className="text-xl">
+                    <CardTitle className="text-lg">
                       {isExchange ? "Exchange" : "Return"} #{data.uuid || data.id}
                     </CardTitle>
-                    <Badge variant={isExchange ? "outline" : "default"} className="ml-2">
-                      {isExchange ? "Exchange" : "Return"}
-                    </Badge>
+                   
                   </div>
                   <CardDescription>Requested on {formatDate(data.created_at)}</CardDescription>
                 </div>
                 <div className="flex flex-col items-end">
-                  <Badge className={getStatusColor(data.return_status)}>{data.return_status}</Badge>
+                  <Badge className={getStatusColor(data.return_status)} >
+                    {data.return_status.includes('Cancelled')?'Cancelled':data.return_status.replace('Return','')}</Badge>
                 </div>
               </div>
             </CardHeader>
@@ -474,6 +436,7 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
         </div>
 
         <div>
+          {statusUpdates.length>0 && 
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Status Updates</CardTitle>
@@ -482,10 +445,8 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
               <div className="space-y-6">
                 {statusUpdates.map((update, index) => (
                   <div key={index} className="relative pl-8">
-                    {index !== statusUpdates.length - 1 && (
-                      <div className="absolute left-[11px] top-8 h-full w-0.5 bg-gray-200"></div>
-                    )}
-                    <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
+                   
+                    <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center">
                       {getStatusIcon(update.icon)}
                     </div>
                     <div>
@@ -498,6 +459,7 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
               </div>
             </CardContent>
           </Card>
+}
 
           <Card className="mt-6">
             <CardHeader>
@@ -508,7 +470,7 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
                 <div className="flex items-start gap-3">
                   <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
-                    <p className="font-medium">Request Date</p>
+                    <p className="font-medium">Order  Date</p>
                     <p className="text-sm text-gray-500">{formatDate(data.created_at)}</p>
                   </div>
                 </div>
@@ -517,7 +479,7 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
                   <div className="flex items-start gap-3">
                     <CreditCard className="h-5 w-5 text-gray-500 mt-0.5" />
                     <div>
-                      <p className="font-medium">Refund Amount</p>
+                      <p className="font-medium">Refundable Amount</p>
                       <p className="text-sm text-gray-500">{formatCurrency(Number.parseFloat(data.refund_amount))}</p>
                     </div>
                   </div>

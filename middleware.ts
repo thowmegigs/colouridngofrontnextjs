@@ -5,7 +5,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // Define paths that require authentication
-  const isCustomerPath = path.startsWith("/customer")
+  const isCustomerPath = path.startsWith("/customer") || path.startsWith("/account")
   const isCheckoutPath = path.startsWith("/checkout") && !path.startsWith("/checkout/auth")
 
   if (isCustomerPath || isCheckoutPath) {

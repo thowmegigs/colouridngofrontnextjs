@@ -1,13 +1,13 @@
 "use client"
 
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import SafeImage from "./SafeImage"
 
 export default function Slider(section_data:any) {
   const [currentSlide, setCurrentSlide] = useState(0)
-const data=section_data.json_column;
+const data=section_data.slider_data;
   // Check if data is available before allowing slide navigation
   const nextSlide = () => {
     if (data?.length) {
@@ -35,7 +35,7 @@ const data=section_data.json_column;
   }
 
   return (
-    <div className="relative h-[50vh] md:h-[70vh] overflow-hidden">
+    <div className="relative h-[50vh] md:h-[90vh] overflow-hidden">
       {data.map((slide:any, index:number) => (
         <div
           key={index}
@@ -45,14 +45,14 @@ const data=section_data.json_column;
         >
           <Link href="/category/summer-collection">
           <div className="relative w-full h-full">
-              <Image
+              <SafeImage
                 src={slide.image || "/placeholder.svg"}
                 alt={`Slide ${index + 1}`}
                 layout="fill"
-                objectFit="cover"
+                objectFit="fit"
                 objectPosition="center top"
                 priority
-                 className="object-cover object-top"
+                 className="object-fit object-top"
               />
             </div>
           </Link>

@@ -1,5 +1,7 @@
 import ExchangePage from "./exchange-page";
 
-export default function ExchangePageWrapper({ params }: { params: { id: string } }) {
+export default async function ExchangePageWrapper({ params }: any) {
+  const { id } = await params
   return <ExchangePage params={params} />
 }
+

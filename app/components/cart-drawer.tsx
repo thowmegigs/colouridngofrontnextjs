@@ -1,10 +1,11 @@
 "use client"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Minus, Plus, ShoppingBag, X } from "lucide-react"
-import Image from "next/image"
+import { image_base_url } from "@/contant"
+import { Minus, Plus, RotateCcw, ShoppingBag, X } from "lucide-react"
 import Link from "next/link"
 import { formatCurrency } from "../lib/utils"
 import { useCart } from "../providers/cart-provider"
+import SafeImage from "./SafeImage"
 
 export default function CartDrawer() {
   const { items, removeItem, updateQuantity, isOpen, setIsOpen, subtotal, discount, total } = useCart()
@@ -39,52 +40,72 @@ export default function CartDrawer() {
         ) : (
           <>
             <div className="flex-1 overflow-auto p-4">
-              <ul className="space-y-4">
+              <ul className="space-y-4 ">
                 {items.map((item) => (
-                  <li key={item.id} className="flex border rounded-lg overflow-hidden">
-                    <div className="w-24 h-24 flex-shrink-0 bg-muted">
-                      <Image
-                        src={item.image || "/placeholder.svg"}
+                  <li key={item.variantId ?? item.id} className="gap-2 flex border  rounded-lg overflow-hidden">
+                    <div className="w-[115px] h-24  ">
+                      <SafeImage
+                        fallbackSrc="/placeholder.png"
+                        src={item.variantId
+                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/large_${item.image}`
+                          : `${image_base_url}/storage/products/${item.id}/thumbnail/large_${item.image}`
+                        }
                         alt={item.name}
-                        width={96}
-                        height={96}
-                        className="w-full h-full object-cover"
+                        width={64}
+                        height={64}
+                        className="rounded-md m-1 ml-3 mt-4 w-full h-[165px] rounded-md object-fit"
                       />
                     </div>
 
                     <div className="flex-1 flex flex-col p-3">
                       <div className="flex justify-between">
                         <div>
-                          <h4 className="font-medium text-sm">{item.name}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            {item.size && `Size: ${item.size}`}
+                          <h4 className="font-medium text-sm truncate max-w-[200px]">{item.name}</h4>
+
+                          <p className="text-xs  mt-1">Sold by: <span className="font-extrabold">{item.vendorName}</span></p>
+                          <p className="text-xs font-bold my-2">
+                            {item.size && <span className="inline-flex items-center px-4 py-1 text-xs font-bold bg-gray-200 text-gray-800">Size: {item.size}</span>}
                             {item.size && item.color && " | "}
-                            {item.color && `Color: ${item.color}`}
+                            {item.color && <span className="inline-flex items-center px-4 py-1  text-xs font-bold bg-gray-200 text-gray-800">Color: {item.color}</span>}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">Sold by: {item.vendorName}</p>
+                          <div className="text-right flex items-center gap-1 mb-2">
+                            <div className="font-medium text-sm font-extrabold">{formatCurrency((item.sale_price ?? item.price)! * item.quantity)}</div>
+                            {item.price && (
+                              <div className="text-sm text-muted-foreground line-through">
+                                {formatCurrency(item.price * item.quantity)}
+                              </div>
+                            )}
+                            {item.discountMessage && (
+                              <div className="text-xs text-red-600">
+
+                                {item.discountMessage}
+                              </div>
+                            )}
+                          </div>
+                          {item.isReturnable &&
+                            <div className="flex items-center space-x-2 my-2 text-sm  font-medium">
+                              <RotateCcw className="w-4 h-4" />
+                              <span><span className="font-extrabold">2 days</span> return available</span>
+                            </div>
+                          }
                         </div>
 
                         <button
                           className="text-muted-foreground hover:text-foreground"
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.id, item.variantId)}
                         >
                           <X className="h-4 w-4" />
                           <span className="sr-only">Remove</span>
                         </button>
                       </div>
 
-                      {item.discountMessage && (
-                        <div className="mt-1 text-xs text-green-600 flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          {item.discountMessage}
-                        </div>
-                      )}
+
 
                       <div className="flex items-center justify-between mt-auto">
                         <div className="flex items-center border rounded">
                           <button
                             className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50"
-                            onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                            onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1), item.variantId)}
                             disabled={item.quantity <= 1}
                           >
                             <Minus className="h-3 w-3" />
@@ -95,21 +116,14 @@ export default function CartDrawer() {
 
                           <button
                             className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
                           >
                             <Plus className="h-3 w-3" />
                             <span className="sr-only">Increase quantity</span>
                           </button>
                         </div>
 
-                        <div className="text-right">
-                          <div className="font-medium">{formatCurrency((item.sale_price??item.price)! * item.quantity)}</div>
-                          {item.price && (
-                            <div className="text-xs text-muted-foreground line-through">
-                              {formatCurrency(item.price * item.quantity)}
-                            </div>
-                          )}
-                        </div>
+
                       </div>
                     </div>
                   </li>
@@ -137,7 +151,7 @@ export default function CartDrawer() {
                 </div>
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid grid-2 gap-2">
                 <Link href="/cart" onClick={() => setIsOpen(false)}>
                   <Button variant="outline" className="w-full">
                     View Cart

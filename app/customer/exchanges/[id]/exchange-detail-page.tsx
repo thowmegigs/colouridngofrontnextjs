@@ -1,18 +1,20 @@
 "use client"
 
-import { formatCurrency, formatDate } from "@/app/lib/utils"
-import { useToast } from "@/app/providers/ToastProvider"
+import SafeImage from "@/app/components/SafeImage"
+import { showToast } from "@/app/components/show-toast"
+import StatusIcon from "@/app/components/status-icons"
+import { formatCurrency, formatDate, getStatusColor } from "@/app/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { image_base_url } from "@/contant"
 import { cancelExchange, getExchangeById } from "@/lib/return-api"
 import { colorNameToHex } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 
 import {
   AlertCircle,
-  ArrowLeft,
   Calendar,
   CheckCircle,
   Clock,
@@ -22,7 +24,6 @@ import {
   Truck,
   XCircle
 } from "lucide-react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -35,7 +36,6 @@ interface ExchangeDetailPageProps {
 export default function ExchangeDetailPage({ exchangeId }: ExchangeDetailPageProps) {
   const router = useRouter()
  
-  const {showToast:toast}=useToast()
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["exchange", exchangeId],
     queryFn: () => getExchangeById(exchangeId),
@@ -54,11 +54,17 @@ export default function ExchangeDetailPage({ exchangeId }: ExchangeDetailPagePro
      setIsCancelling(true)
      try {
        await cancelExchange(exchangeId)
-       toast("Return cancelled", "Your return request has been cancelled successfully.",
+       showToast({title:"Return cancelled",
+        description: "Your return request has been cancelled successfully."}
        )
        refetch()
+        setTimeout(()=>{
+         router.replace(`/customer/orders`)
+      },2000)
      } catch (error) {
-       toast( "Error", error instanceof Error ? error.message : "Failed to cancel return request",
+       showToast({title:"Error", 
+        description:error instanceof Error ? error.message : "Failed to cancel return request",
+      variant:'destructive'}
         )
      } finally {
        setIsCancelling(false)
@@ -87,15 +93,7 @@ export default function ExchangeDetailPage({ exchangeId }: ExchangeDetailPagePro
   }
 
   // Get color based on exchange status
-  const getStatusColor = (status: string) => {
-    if (status.includes("Requested")) return "bg-yellow-100 text-yellow-800"
-    if (status.includes("Approved")) return "bg-blue-100 text-blue-800"
-    if (status.includes("Processing")) return "bg-purple-100 text-purple-800"
-    if (status.includes("Completed")) return "bg-green-100 text-green-800"
-    if (status.includes("Cancelled")) return "bg-red-100 text-red-800"
-    if (status.includes("Rejected")) return "bg-red-100 text-red-800"
-    return "bg-gray-100 text-gray-800"
-  }
+
 
   if(isLoading)
    return <h1>Laoding</h1>
@@ -104,11 +102,8 @@ if(error)
   
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back
-      </Button>
-
+    <div className="container mx-auto p-0 m-0">
+  
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <Card>
@@ -116,18 +111,19 @@ if(error)
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <CardTitle className="text-xl">Exchange #{data.uuid}</CardTitle>
-                    <Badge variant="outline" className="ml-2">
-                      Exchange
-                    </Badge>
+                    <CardTitle className="text-md">Exchange Id <span className="text-sm">#{data.uuid}</span></CardTitle>
+                    
                   </div>
-                  <CardDescription>
-                    Requested on {formatDate(data.created_at)} • Order #{data.order_id}
+                  <CardDescription className="text-xs">
+                    Requested on {formatDate(data.created_at)} for  Order #{data.order_id}
                   </CardDescription>
                 </div>
                 <div className="flex flex-col items-end">
-                  <Badge className={getStatusColor(data.return_status)}>{data.return_status}</Badge>
+                  <div className="flex flex-col items-end">
+                  <Badge className={getStatusColor(data.return_status)} >
+                    {data.return_status.includes('Cancelled')?'Cancelled':data.return_status.replace('Exchange','')}</Badge>
                 </div>
+                 </div>
               </div>
             </CardHeader>
 
@@ -136,24 +132,27 @@ if(error)
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
                         <p className="text-sm text-gray-500">Reason</p>
-                        <p className="font-medium">{data.reason}</p>
+                        <p className="font-medium text-xs">{data.reason}</p>
                       </div>
                       <div className="md:col-span-2">
                         <p className="text-sm text-gray-500">Details</p>
-                        <p className="font-medium">{data.details || "No additional details provided"}</p>
+                        <p className="font-medium text-xs">{data.details || "No additional details provided"}</p>
                       </div>
                     </div>
                    
                   </div>
 
                   <div className="mb-6">
-                    <h3 className="text-lg font-medium mb-3">Item Details</h3>
+                    <h3 className="text-md font-medium mb-3">Item Details</h3>
                     <div className="bg-muted/20 rounded-lg p-4">
                       <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-shrink-0">
                           <div className="relative h-24 w-24 rounded-md overflow-hidden">
-                            <Image
-                              src={data.image || "/placeholder.svg?height=96&width=96&query=product"}
+                            <SafeImage
+                              src={data.variant_id
+                                ?`${image_base_url}/storage/products/${data.product_id}/variants/${data.original_variant_image}`
+                                :`${image_base_url}/storage/products/${data.product_id}/${data.product_image}`
+                              }
                               alt={data.name}
                               fill
                               className="object-cover"
@@ -161,7 +160,7 @@ if(error)
                           </div>
                         </div>
                         <div className="flex-grow">
-                          <h4 className="font-medium">{data.name}</h4>
+                          <h4 className="font-medium text-sm">{data.name}</h4>
                           <p className="text-sm text-muted-foreground mt-1">
                             Price: {formatCurrency(data.sale_price)}
                           </p>
@@ -228,8 +227,8 @@ if(error)
                     {index !== data.return_status_updates.length - 1 && (
                       <div className="absolute left-[11px] top-8 h-full w-0.5 bg-gray-200"></div>
                     )}
-                    <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
-                      {getStatusIcon(update.icon)}
+                    <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center ">
+                        <StatusIcon status={update.status} />
                     </div>
                     <div>
                       <h4 className="font-medium">{update.status}</h4>
