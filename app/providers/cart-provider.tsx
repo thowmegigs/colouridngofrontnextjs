@@ -224,35 +224,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const applyCoupon = async (code: string): Promise<{ success: boolean; message: string }> => {
+  const applyCoupon = async (code: string): Promise<any> => {
     setCouponError(null)
     setIsCouponLoading(true)
 
     try {
       const response: any = await apiApplyCoupon(code, items)
-
-      if (response.statusText === 'OK') {
-
-        setAppliedCoupon({
+     console.log('gt repos',response)
+      setAppliedCoupon({
           code,
-          discountAmount: response.data.data.discount,
-          details: response.data.data.coupon,
+          discountAmount: response.data.discount,
+          details: response.data.coupon,
         })
         setIsCouponLoading(false)
-        return {
-          success: true,
-          message: response.message || `Coupon applied successfully! You saved $${response.data.data.discount.toFixed(2)}`,
-        }
-      } else {
-        setCouponError(response.error || "Invalid coupon")
-        setIsCouponLoading(false)
-        return { success: false, message: response.error || "Invalid coupon" }
-      }
+        
+      
+      
     } catch (error) {
       console.error("Error applying coupon:", error)
-      setCouponError("Failed to apply coupon")
+      setCouponError(error.message??"Failed to apply coupon")
       setIsCouponLoading(false)
-      return { success: false, message: "Failed to apply coupon" }
+      throw new Error(error.message)
     }
   }
 

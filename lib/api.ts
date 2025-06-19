@@ -179,21 +179,33 @@ export type CouponValidationResponse = {
   error?: string
 }
 
-export async function validateCoupon(code: string, cartItems: any[]): Promise<CouponValidationResponse> {
+export async function validateCoupon(code: string, cartItems: any[]): Promise<any> {
 
-  const subtotal = cartItems.reduce((sum, item) => sum + Number.parseFloat(item.price) * item.quantity, 0)
-
-  return await axios.post(`${api_url}/coupons/apply`, {
-    code, user_id: 1, cartTotal: subtotal
-  })
+  const subtotal = cartItems.reduce((sum, item) => sum + Number.parseFloat(item.sale_price) * item.quantity, 0)
+  try{
+   return  await apiRequest('/coupons/apply',{
+    method:"POST",
+    requestData: {
+    code,cartTotal: subtotal
+  }});
+   
+}catch(err){
+      throw new Error(err.message || "Coupon validation failed");
+ 
 }
 
-export async function applyCoupon(code: string, cartItems: any[]): Promise<CouponValidationResponse> {
-  // This would typically update the coupon usage in the database
-  // For now, we'll just validate the coupon
-  return validateCoupon(code, cartItems)
+ 
 }
-
+export async function applyCoupon(
+  code: string,
+  cartItems: any[]
+): Promise<CouponValidationResponse> {
+  try {
+    return await validateCoupon(code, cartItems);
+  } catch (err: any) {
+    throw new Error(err.message || "Coupon validation failed");
+  }
+}
 export async function removeCoupon(code: string): Promise<{ success: boolean; message: string }> {
   // Mock implementation - replace with actual API call
   await new Promise((resolve) => setTimeout(resolve, 300))

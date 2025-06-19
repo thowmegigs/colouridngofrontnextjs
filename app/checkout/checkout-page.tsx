@@ -402,17 +402,14 @@ useEffect(()=>{
     try {
       const result = await applyCoupon(couponCode)
 
-      if (result.success) {
         setCouponCode("")
         showToast({
           title: "Success", description: "Coupon applied successfully!"
         })
-      } else {
-        setCouponError(result.message || "Invalid coupon code")
-      }
+     
     } catch (error) {
      
-      setCouponError("Failed to apply coupon. Please try again.")
+      setCouponError(error['message'])
     } finally {
       setIsApplyingCoupon(false)
     }
@@ -498,7 +495,7 @@ useEffect(()=>{
           localStorage.removeItem("cartCoupon")
           const encryptedId = encryptId(response.order_id);
 
-          router.push(`/order/success?id=${encodeURIComponent(encryptedId)}`)
+          router.replace(`/order/success?id=${encodeURIComponent(encryptedId)}`)
         }
       } else {
         showToast({

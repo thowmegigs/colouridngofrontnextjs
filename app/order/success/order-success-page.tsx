@@ -216,10 +216,10 @@ export default function OrderSuccessPage() {
                   <span className="text-muted-foreground">Shipping</span>
                   <span>{formatCurrency(order.shipping_cost)}</span>
                 </div>
-                {order.total_discount > 0 && (
+                {order.discount > 0 && (
                   <div className="flex justify-between py-1 text-green-600">
                     <span>Discount</span>
-                    <span>-{formatCurrency(order.total_discount)}</span>
+                    <span>-{formatCurrency(order.discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between py-2 font-medium text-lg border-t mt-2">

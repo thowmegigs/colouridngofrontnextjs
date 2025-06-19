@@ -6,16 +6,14 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DialogTitle
 } from "@/components/ui/dialog"
 import {
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
+  DrawerTitle
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { image_base_url } from "@/contant"
@@ -37,7 +35,6 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { AuthModal } from "../components/auth-modal"
 import SafeImage from "../components/SafeImage"
 import { showToast } from "../components/show-toast"
 import { formatCurrency } from "../lib/utils"
@@ -62,32 +59,25 @@ export default function CartPage() {
   } = useCart()
 
   const [couponCode, setCouponCode] = useState("")
-  const [showCoupons, setShowCoupons] = useState(false)
+
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
   const [isLoadingCoupons, setIsLoadingCoupons] = useState(false)
   const [couponMessage, setCouponMessage] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [pendingCouponCode, setPendingCouponCode] = useState<string | null>(null)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [isCheckingAuth, setIsCheckingAuth] = useState(false)
+  const [isOpenCoupon, setIsOpenCoupon] = useState(false);
+  const { isAuthenticated } = useAuth()
 
 
-  const { isAuthenticated } = useAuth();
 
   const isMobile = useMobile()
 
-  // Check login status on component mount
-  useEffect(() => {
-    // This is a simplified check. In a real app, you would use your auth system
-    const userToken = localStorage.getItem("userToken")
-    const isLoggedInValue = localStorage.getItem("isLoggedIn") === "true"
-    setIsLoggedIn(!!userToken || isLoggedInValue)
-  }, [])
+
 
   // Fetch available coupons when the dialog/drawer is opened
   useEffect(() => {
-    if (showCoupons) {
+    if (isOpenCoupon) {
       const loadCoupons = async () => {
         setIsLoadingCoupons(true)
         try {
@@ -107,7 +97,7 @@ export default function CartPage() {
 
       loadCoupons()
     }
-  }, [showCoupons, showToast])
+  }, [isOpenCoupon, showToast])
 
   // Filter coupons based on search query
   const filteredCoupons = useMemo(() => {
@@ -124,11 +114,9 @@ export default function CartPage() {
   }, [availableCoupons, searchQuery])
 
   const handleApplyCouponWithAuth = async (code: string) => {
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       // Save the coupon code and open auth modal
-      setPendingCouponCode(code)
-      setIsAuthModalOpen(true)
-      return
+      router.push(`auth/login?redirect=/cart`)
     }
 
     // User is logged in, proceed with applying coupon
@@ -143,25 +131,29 @@ export default function CartPage() {
       })
       return
     }
-
-    const result = await applyCoupon(code)
-
-    if (result.success) {
+    try {
+      const result = await applyCoupon(code)
+      console.log('result', result)
       setCouponMessage({
         type: "success",
         message: result.message,
       })
       setCouponCode("")
-      setShowCoupons(false)
+      setIsOpenCoupon(false)
 
       showToast({
         title: "Coupon Applied", description: result.message as any
       })
-    } else {
+    }
+
+    catch (err) {
+      setIsOpenCoupon(false)
+      console.log('lo err', err)
       setCouponMessage({
         type: "error",
-        message: result.message,
+        message: err.message,
       })
+
     }
 
     // Clear message after 5 seconds
@@ -180,20 +172,8 @@ export default function CartPage() {
     }
   }
 
-  const handleAuthSuccess = () => {
-    setIsLoggedIn(true)
-    setIsAuthModalOpen(false)
-    setIsCheckingAuth(false)
-    router.push('/checkout')
-    // If there was a pending coupon code, apply it now
-    if (pendingCouponCode) {
-      processCouponApplication(pendingCouponCode)
-      setPendingCouponCode(null)
-    }
-  }
 
   const handleCheckoutClick = () => {
-    setIsCheckingAuth(true)
 
     if (isAuthenticated) {
       // User is logged in, proceed to checkout
@@ -362,15 +342,7 @@ export default function CartPage() {
         </div>
 
         {/* Applied coupon notification */}
-        {appliedCoupon && (
-          <div className="bg-green-50 dark:bg-green-900/20 px-4 py-2 flex items-center text-green-700 dark:text-green-400 text-sm">
-            <Check className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span>
-              <span className="font-medium">{appliedCoupon.code}</span> applied
-              {discount > 0 && ` (${formatCurrency(discount)} off)`}
-            </span>
-          </div>
-        )}
+       
 
         {/* Cart items */}
         <div className="divide-y">
@@ -412,11 +384,11 @@ export default function CartPage() {
                   {item.color && <span className="inline-flex items-center px-4 py-1  text-xs font-bold bg-gray-200 text-gray-800">Color: {item.color}</span>}
                 </p>
                 {item.isReturnable &&
-                <div className="flex items-center space-x-2 my-2 text-sm  font-medium">
-                  <RotateCcw className="w-4 h-4" />
-                  <span><span className="font-extrabold">2 days</span> return available</span>
-                </div>
-          }
+                  <div className="flex items-center space-x-2 my-2 text-sm  font-medium">
+                    <RotateCcw className="w-4 h-4" />
+                    <span><span className="font-extrabold">2 days</span> return available</span>
+                  </div>
+                }
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center h-8 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                     <button
@@ -493,19 +465,31 @@ export default function CartPage() {
               </Button>
             </div>
           )}
-
-          <Drawer>
-            <DrawerTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-2 text-sm h-9"
-                onClick={() => setShowCoupons(true)}
-              >
-                <Tag className="h-3.5 w-3.5 mr-1.5" />
-                View Available Coupons
-              </Button>
-            </DrawerTrigger>
+           {couponError && (
+                      <div className="mt-2 text-sm text-destructive flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {couponError}
+                      </div>
+                    )}
+                   {appliedCoupon && (
+          <div className="bg-green-50 dark:bg-green-900/20  mt-2 py-2 flex items-center text-green-700 dark:text-green-400 text-sm">
+            <Check className="h-4 w-4 mr-2 flex-shrink-0" />
+            <span>
+              <span className="font-medium">{appliedCoupon.code}</span> applied
+              {discount > 0 && ` (${formatCurrency(discount)} off)`}
+            </span>
+          </div>
+        )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full mt-2 text-sm h-9"
+            onClick={() => setIsOpenCoupon(true)}
+          >
+            <Tag className="h-3.5 w-3.5 mr-1.5" />
+            View Available Coupons
+          </Button>
+          <Drawer open={isOpenCoupon} onOpenChange={setIsOpenCoupon}>
             <DrawerContent>
               <DrawerHeader className="pb-2">
                 <DrawerTitle>Available Coupons</DrawerTitle>
@@ -549,7 +533,7 @@ export default function CartPage() {
             <div className="border-t pt-2 mt-2">
               <div className="flex justify-between font-medium text-lg">
                 <span>Total</span>
-                <span>{formatCurrency(total)}</span>
+                <span>{formatCurrency(total + shipping_cost)}</span>
               </div>
             </div>
           </div>
@@ -560,46 +544,15 @@ export default function CartPage() {
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-950 border-t px-4 py-3 flex items-center justify-between z-20">
           <div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
-            <div className="text-sm font-bold">{formatCurrency(total)}</div>
+            <div className="text-sm font-bold">{formatCurrency(total + shipping_cost)}</div>
           </div>
-          <Button className="px-4 py-2 rounded-md text-sm" onClick={handleCheckoutClick} disabled={isCheckingAuth}>
-            {isCheckingAuth ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              "Checkout"
-            )}
+          <Button className="px-4 py-2 rounded-md text-sm" onClick={handleCheckoutClick}
+          >           Checkout
+
           </Button>
         </div>
 
-        {/* Auth Modal */}
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => {
-            setIsAuthModalOpen(false)
-            setPendingCouponCode(null)
-          }}
-          onSuccess={handleAuthSuccess}
-          initialView="login"
 
-
-        />
-        {/* <Button
-          className="mt-4 w-full h-10 text-base fixed bottom-20"
-          onClick={handleCheckoutClick}
-          disabled={isCheckingAuth}
-        >
-          {isCheckingAuth ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            "Proceed To Checkout"
-          )}
-        </Button> */}
       </div>
     )
   }
@@ -757,7 +710,7 @@ export default function CartPage() {
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between font-medium text-lg">
                     <span>Total</span>
-                    <span>{formatCurrency(total)}</span>
+                    <span>{formatCurrency(total + shipping_cost)}</span>
                   </div>
                 </div>
               </div>
@@ -811,14 +764,12 @@ export default function CartPage() {
                         {couponError}
                       </div>
                     )}
+                    <Button variant="outline" className="w-full" onClick={() => setIsOpenCoupon(true)}>
+                      <Tag className="h-4 w-4 mr-2" />
+                      View Available Coupons
+                    </Button>
+                    <Dialog open={isOpenCoupon} onOpenChange={setIsOpenCoupon} >
 
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full" onClick={() => setShowCoupons(true)}>
-                          <Tag className="h-4 w-4 mr-2" />
-                          View Available Coupons
-                        </Button>
-                      </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Available Coupons</DialogTitle>
@@ -831,15 +782,9 @@ export default function CartPage() {
                 )}
               </div>
 
-              <Button className="w-full" onClick={handleCheckoutClick} disabled={isCheckingAuth}>
-                {isCheckingAuth ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Proceed to Checkout"
-                )}
+              <Button className="w-full" onClick={handleCheckoutClick}>
+                Proceed to Checkout
+
               </Button>
 
               <Link href="/">
@@ -852,17 +797,7 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => {
-          setIsAuthModalOpen(false)
-          setPendingCouponCode(null)
-        }}
-        onSuccess={handleAuthSuccess}
-        initialView="login"
 
-      />
     </div>
   )
 }
