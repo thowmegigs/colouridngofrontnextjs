@@ -21,12 +21,12 @@ const HomePageSkeleton = () => {
         <div className="space-y-8 p-1 w-full mx-auto">
             {/* Slider with full-width box overlay */}
             <div className="relative w-full aspect-[3/1]  overflow-hidden">
-        {/* Background shimmer */}
-        <div className="absolute inset-0 bg-gray-300 animate-pulse" />
+                {/* Background shimmer */}
+                <div className="absolute inset-0 bg-gray-300 animate-pulse" />
 
-        {/* Overlay Box */}
-        
-      </div>
+                {/* Overlay Box */}
+
+            </div>
 
             {/* Category Circles */}
             <div className="flex gap-4 overflow-x-auto py-2">
@@ -59,11 +59,11 @@ export default function HomePageContent() {
     })
 
 
-   
-      
 
-    if (error ||isLoading) {
-        return <HomePageSkeleton/>
+
+
+    if (error || isLoading) {
+        return <HomePageSkeleton />
     }
 
     if (!content_sections?.length) {
@@ -75,17 +75,45 @@ export default function HomePageContent() {
 
         switch (section.content_type) {
             case "Slider":
-                content = section.slider_data ? <Slider section_data={section} /> : null;
+                content = section.slider_data ? <div className="flex flex-col items-center justify-center mb-6">
+                    {section.show_header=='Yes' && (
+                        section.header_image ?
+                            <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
+                            : (<>
+                                <h2 className="text-2md md:text-2xl font-bold">{section.section_title}</h2>
+                                {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
+                            </>))
+                    }
+                    <Slider section_data={section} /></div> : null;
                 break;
             case "Coupons":
                 content = <OffersSection data={section} />;
                 break;
             case "Banner":
-                content = section.banner_data ? <BannerSection banners={section.banner_data} /> : null;
+                content = section.banner_data ? <div className="flex flex-col items-center justify-center mb-6">
+                    {section.show_header=='Yes' && (
+                        section.header_image ?
+                            <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
+                            : (<>
+                                <h2 className="text-2md md:text-2xl font-bold">{section.section_title}</h2>
+                                {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
+                            </>))
+                    }
+                    <BannerSection banners={section.banner_data} /></div> : null;
                 break;
             case "Video":
 
-                content = <VideoSlider data={section} />;
+                content = <div className="flex flex-col items-center justify-center mb-3">
+                    {section.show_header=='Yes' && (
+                        section.header_image ?
+                            <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
+                            : (<>
+                                <h2 className="text-2md md:text-2xl font-bold">{section.section_title}</h2>
+                                {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
+                            </>))
+                    }
+
+                    <VideoSlider data={section} /> </div>;
                 break;
             case "Categories":
                 const categories = section['categories1'] ? section['categories1'] : []
@@ -101,14 +129,14 @@ export default function HomePageContent() {
             case "Products":
                 content = section.products1 ? (
                     <>
-                        <div className="flex items-center justify-between mb-6">
-                            {
+                        <div className="flex items-center justify-between mb-3">
+                            {section.show_header=='Yes' && (
                                 section.header_image ?
                                     <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
                                     : (<>
-                                        <h2 className="text-2sm md:text-xl font-bold">{section.section_title}</h2>
+                                        <h2 className="text-2sm md:text-2xl font-bold">{section.section_title}</h2>
                                         {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
-                                    </>)
+                                    </>))
                             }
 
                             {/* <Link href="/new-arrivals" className="text-xs md:text-sm font-medium text-primary flex items-center">
@@ -124,14 +152,15 @@ export default function HomePageContent() {
                 if (section.collection_products_when_single_collection_set) {
                     content = (
                         <>
-                            <div className="flex items-center justify-between mb-6">
-                                {
+                            <div className="flex items-center justify-between mb-3">
+                                {section.show_header=='Yes' && (
                                     section.header_image ?
                                         <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
                                         : (<>
-                                            <h2 className="text-2sm md:text-xl font-bold">{section.section_title}</h2>
+                                            <h2 className="text-2sm md:text-2xl font-bold">{section.section_title}</h2>
                                             {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
                                         </>)
+                                 )
                                 }
                                 <Link href={`/collection/${section.collections1[0]['slug']}`} className="text-xs md:text-sm font-medium text-primary flex items-center">
                                     View All
@@ -145,7 +174,7 @@ export default function HomePageContent() {
                     // content = section.collection1 ? (section.display === 'Vertical'
                     //     ? <MasonryGrid />
                     //     : <CollectionBanners data={section} />) : null;
-                    content =  <CollectionBanners data={section} />;
+                    content = <CollectionBanners data={section} />;
                 }
                 break;
             default:

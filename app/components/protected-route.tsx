@@ -29,8 +29,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         setIsChecking(false)
      
     }
-
-   !isAuthenticated &&  checkAuth()
+    !isAuthenticated?  checkAuth():setIsChecking(false)
   }, [isLoading, isAuthenticated, refreshUser, router])
 
   if (isLoading || isChecking) {

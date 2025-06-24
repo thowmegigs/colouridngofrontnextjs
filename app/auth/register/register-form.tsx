@@ -1,6 +1,7 @@
 "use client"
 
 import SafeImage from "@/app/components/SafeImage"
+import { showToast } from "@/app/components/show-toast"
 import { useAuth } from "@/app/providers/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -86,11 +87,11 @@ export default function RegisterForm() {
     try {
       const response = await verifyRegOtpAndLogin(phoneOtp, name, email, phone)
 
-    console.log('verify orp',response)
-        // showToast({title:"Success",description:"Your account created successfully"})
-        // setTimeout(()=>{
-        //     router.replace('/checkout')
-        // },1000)
+   
+         showToast({title:"Success",description:"Your account created successfully"})
+         setTimeout(()=>{
+             router.replace('/')
+         },1000)
       
      
 

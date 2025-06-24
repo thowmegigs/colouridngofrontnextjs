@@ -366,7 +366,7 @@ const menuMouseEvent=()=>{
                       onClick={() => setShowAccountDropdown(!showAccountDropdown)}
                     >
                       <User className="h-5 w-5 mr-1" />
-                      <span>Account</span>
+                      <span>Profile</span>
                       <ChevronDown className="ml-1 h-4 w-4" />
                     </button>
                   ) : (

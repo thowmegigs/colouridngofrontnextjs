@@ -26,10 +26,11 @@ export default function LoginForm() {
   const { login, verifyOtp, isLoading, refreshUser,isAuthenticated } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get("redirect") || "/checkout"
+
 
   useEffect(() => {
     console.log('isAtthen',isAuthenticated)
+      const redirect = searchParams.get("redirect") || "/checkout"
     const refersh=async()=>{
         const success = await refreshUser()
           if (success) {
@@ -42,7 +43,7 @@ export default function LoginForm() {
     else{
     refersh()
     }
-  }, [redirect, isAuthenticated])
+  }, [ isAuthenticated])
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -93,7 +94,7 @@ export default function LoginForm() {
     e.preventDefault()
     setError("")
     setSuccess("")
-
+  const redirect = searchParams.get("redirect") || "/checkout"
     if (!otp || otp.length !== 6) {
       setError("Please enter a valid OTP")
       return

@@ -209,7 +209,7 @@ const pathAr=['/cart','/category/','/product/','/collection/','/customer/','/che
                       {section.items.map((item, itemIdx) => (
                         <Link
                           key={itemIdx}
-                          href={item.href}
+                          href={item.href} passHref
                           className={`flex items-center justify-between p-4 ${
                             itemIdx !== section.items.length - 1 ? "border-b" : ""
                           } ${item.highlight ? "bg-primary-50" : "hover:bg-gray-50"} active:bg-gray-100 transition-colors`}

@@ -235,12 +235,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiRequest(
         'auth/logout',
         {
-          method: "POST",
-          requestData: null
-
-        })
+          method: "GET",
+         })
 
       setUser(null)
+      setIsAuthenticated(false)
       location.reload();
     } catch (error) {
       console.error("Logout error:", error)

@@ -15,7 +15,7 @@ export default function VideoSlider({data}:any) {
     const videos=data.videos;
   
   return (
-    <div className="w-full mx-auto  my-10 ">
+    <div className="w-full mx-auto  my-5 ">
       <Swiper
        
     className="custom-swiper1 pb-[40px]"

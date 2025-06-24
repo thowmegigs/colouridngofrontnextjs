@@ -34,7 +34,7 @@ const useCategoryDetails = (categoryId: string | null) => {
 }
 
 export default function BottomCategryLink() {
-    const [selectedCategoryId, setSelectedCategoryId] = useState(null)
+    const [selectedCategoryId, setSelectedCategoryId] = useState("2")
     const [isCategoryPage, setIsCategoryPage] = useState(false)
     const [open, setOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")

@@ -3,7 +3,7 @@
 import ErrorPage from "@/app/components/Error"
 import LoadingSpinner from "@/app/components/LoadingSpinner"
 import SafeImage from "@/app/components/SafeImage"
-import { capitalize, formatCurrency, formatDate } from "@/app/lib/utils"
+import { formatCurrency, formatDate } from "@/app/lib/utils"
 import { Button } from "@/components/ui/button"
 import { image_base_url } from "@/contant"
 import { fetchOrders } from "@/lib/api"
@@ -92,10 +92,12 @@ const { data: orders, isLoading, isError } = useQuery({
                             {formatDate(order.date)}
                           </div>
                         </div>
-                        <div className="flex items-center">
-                          {getStatusIcon(order.status)}
-                          <span className="ml-2 text-sm font-medium">{capitalize(order.status)}</span>
-                        </div>
+                       <div className="flex items-center justify-end">
+                           
+                            <Link href={`/customer/orders/${order.id}`}>
+                              <Button size="sm">Show Details</Button>
+                            </Link>
+                          </div>
                       </div>
                       <div className="p-4">
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -134,12 +136,7 @@ const { data: orders, isLoading, isError } = useQuery({
                             </div>
                             <div className="font-medium mt-1">{formatCurrency(order.total)}</div>
                           </div>
-                          <div className="flex items-center justify-end">
-                           
-                            <Link href={`/customer/orders/${order.id}`}>
-                              <Button size="sm">Details</Button>
-                            </Link>
-                          </div>
+                          
                         </div>
                       </div>
                     </div>

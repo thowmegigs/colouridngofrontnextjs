@@ -120,10 +120,11 @@ const BottomActions = ({ onFilterOpen, onSortOpen }: {
 
 export default function CategoryPage({ slug }: CategoryPageProps) {
   const [sortBy, setSortBy] = useState("price-low-high")
-  const [priceRange, setPriceRange] = useState([0, 100000])
+ 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const [page, setPage] = useState(1)
+   const [priceRange, setPriceRange] = useState([0, 100000])
   const [selectedAttribute, setSelectedAttribute] = useState<string | null>(null)
   const [filterParams, setFilterParams] = useState<Record<string, any[]>>({})
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -158,9 +159,10 @@ export default function CategoryPage({ slug }: CategoryPageProps) {
     if (priceRange[1] !== null) params.append("maxPrice", priceRange[1].toString())
 
     for (const [key, values] of Object.entries(filterParams)) {
-      if (values?.length) {
-        params.append(key, values.map(v => v.id).join(','))
+     if (Array.isArray(values) && values?.length > 0) {
+        params.append(key, values.join(','))
       }
+      else params.append(key, (values as any).id.toString())
     }
 
     return params.toString()
@@ -202,19 +204,17 @@ export default function CategoryPage({ slug }: CategoryPageProps) {
     }
   }, [options])
 
-  const handleOptionChange = useCallback((attribute: string, option: any) => {
-    setFilterParams(prev => {
-      const current = prev[attribute] || []
-      const exists = current.some((v: any) => v.id === option.id)
+  // const handleOptionChange = useCallback((attribute: string, option: any) => {
+  //   setFilterParams(prev => {
+  //     const current = prev[attribute] || []
+  //     const exists = current.some((v: any) => v.id === option.id)
 
-      return {
-        ...prev,
-        [attribute]: exists
-          ? current.filter((v: any) => v.id !== option.id)
-          : [...current, option]
-      }
-    })
-  }, [])
+  //     return {
+  //       ...prev,
+  //       [attribute]:option
+  //     }
+  //   })
+  // }, [])
 
   const handleMultiOptionChange = (attribute: string, selectedOptions: any[]) => {
     console.log('selectedOptions', selectedOptions)
@@ -243,7 +243,7 @@ export default function CategoryPage({ slug }: CategoryPageProps) {
 
       return {
         ...prev,
-        [attribute]: [selectedOption],
+        [attribute]: selectedOption,
       };
     });
   };
@@ -336,7 +336,7 @@ export default function CategoryPage({ slug }: CategoryPageProps) {
                         <input
                           type={['discounts','ratings'].includes(selectedSection.key)?'radio':"checkbox"}
                           checked={isChecked}
-                          onChange={() => handleOptionChange(selectedSection.key, option)}
+                          onChange={() =>['discounts','ratings'].includes(selectedSection.key)?handleMultiOptionChangeRadio(selectedSection.key, option):handleMultiOptionChange(selectedSection.key, option)}
                         />
                         <span>{option.name}</span>
                       </label>
@@ -516,8 +516,8 @@ export default function CategoryPage({ slug }: CategoryPageProps) {
                   </div>
                 )}
 
-              {Object.entries(filterParams).map(([key, values]) =>
-                values.map((op: any) => (
+              {Object.entries(filterParams).map(([key, values]) =>{
+              return   (Array.isArray(values) && values.length>0)?values.map((op: any) => (
                   <div key={`${key}-${op.id}`} className="flex items-center bg-muted text-sm rounded-full px-3 py-1">
                     <span>{op.name}</span>
                     <Button
@@ -529,7 +529,18 @@ export default function CategoryPage({ slug }: CategoryPageProps) {
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
-                ))
+                )):  <div key={`${key}-${values?.id}`} className="flex items-center bg-muted text-sm rounded-full px-3 py-1">
+                    <span>{values?.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 ml-1"
+                      onClick={() => handleRemoveFilter(key, values?.id)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+              }
               )}
 
               <Button

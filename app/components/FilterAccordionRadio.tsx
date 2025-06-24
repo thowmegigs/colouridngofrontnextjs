@@ -35,7 +35,7 @@ interface Props {
   /**
    * The current selection supplied from outside (useful when restoring state from URL params).
    */
-  selectedFilterParams: FilterOption[] | undefined;
+  selectedFilterParams: Record<string,any>;
 
   /**
    * Fires whenever the user changes the selection.
@@ -72,8 +72,8 @@ const FilterAccordionItemRadio: React.FC<Props> = ({
 
   // Sync external selection into internal state (e.g., when parsing URL params)
   useEffect(() => {
-    if (selectedFilterParams && selectedFilterParams.length > 0) {
-      setSelectedId(selectedFilterParams[0]?.id);
+    if (selectedFilterParams) {
+      setSelectedId(selectedFilterParams?.id);
     } else {
       setSelectedId(undefined);
     }

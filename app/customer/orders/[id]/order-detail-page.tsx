@@ -1,23 +1,20 @@
 "use client"
 
 import ErrorPage from "@/app/components/Error"
+import OrderItemCard from "@/app/components/order-item-card"
 import SafeImage from "@/app/components/SafeImage"
-import StatusIcon from "@/app/components/status-icons"
-import { capitalize, formatCurrency, formatDate, getStatusColor } from "@/app/lib/utils"
+import { formatCurrency, formatDate, getStatusColor } from "@/app/lib/utils"
 import LoadingScreen from "@/app/loading"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import { image_base_url } from "@/contant"
 import { useMobile } from "@/hooks/use-mobile"
 import { fetchOrderById } from "@/lib/api"
-import { colorNameToHex } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import {
   MapPin,
-  Package,
   Phone,
   RefreshCcw,
   Truck,
@@ -25,7 +22,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 
 // Dummy order data
 
@@ -60,20 +57,11 @@ const { data:order, isLoading, error } =useQuery<any>({
   // Tab options for the select dropdown
   const tabOptions = [
     { value: "items", label: "Items" },
-    { value: "shipping", label: "Shipping" },
+    { value: "shipping", label: "Shipping To" },
     // { value: "payment", label: "Payment" },
     { value: "returns", label: "Returns & Exchanges" },
   ]
-  const checkIfReturnDateExpired=useMemo(()=>{
-    if(order){
-      const orderDate = new Date(order.created_at);
-      const return_window=parseInt(process.env.NEXT_PUBLIC_RETURN_DAYS);
-      const returnDeadline = new Date(orderDate.getTime() + return_window * 24 * 60 * 60 * 1000);
-      const now = new Date();
-      return now > returnDeadline
-    }
-    return false
-  },[order])
+  
 if(isLoading){
   return <LoadingScreen/>
 }
@@ -84,7 +72,7 @@ if(error){
     <div className="container p-0 mx-auto m-0">
      
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1  gap-4 md:gap-6">
         <div className="lg:col-span-2">
           <Card className="p-0">
             <CardHeader className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -92,12 +80,7 @@ if(error){
                 <CardTitle className="text-xl">Order #{order.orderId}</CardTitle>
                 <CardDescription>Placed on {formatDate(order.created_at)}</CardDescription>
               </div>
-              <div className="flex flex-col items-end">
-                <Badge className={getStatusColor(order.delivery_status)}>{capitalize(order.delivery_status==='ordered'?'Order Placed':order.delivery_status)}</Badge>
-                {/* <Button variant="link" size="sm" className="h-auto p-0 mt-1">
-                  <Download className="h-4 w-4 mr-1" /> Invoice
-                </Button> */}
-              </div>
+            
             </CardHeader>
 
             <CardContent>
@@ -137,85 +120,9 @@ if(error){
               {activeTab === "items" && (
                 <div className="space-y-6">
                   {order.items.map((item: any,index:any) => {
-                    const original_attributes=item.original_atributes?JSON.parse(item.original_atributes):null
-                    const exchange_attributes=item.exchange_attributes?JSON.parse(item.exchange_attributes):null
-                     const imageurl = item.variant_id
-                                             ? `${image_base_url}/storage/products/${item.product_id}/variants/${item.variant_image}`
-                                                                    : `${image_base_url}/storage/products/${item.product_id}/${item.product_image}`
-                                          
-                    return <div
-                      key={index}
-                      className="flex flex-row gap-4 pb-4 border-b last:border-0"
-                    >
-                      <div className="flex-shrink-0">
-                        <div className="relative h-24 w-24 rounded-md overflow-hidden">
-                          <SafeImage
-                            src={imageurl}
-                            alt={item.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex-grow">
-                        <div className="flex flex-col sm:flex-row sm:justify-between">
-                          <div>
-                             <h4 className="text-sm line-clamp-2">{item.name}</h4>
-                            <h4 className="text-xs text-md text-primary">{item.vendor_name}</h4>
-                           
-                            <div className="flex flex-wrap items-center gap-2 mt-1">
-                              {original_attributes?.Size && <span className="text-xs font-semibold bg-gray-200 p-1 text-black">Size: {original_attributes?.Size}</span>}
-                              {original_attributes?.Color && (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs font-semibold bg-gray-200 p-1 text-black">Color: {original_attributes?.Color}</span>
-                                  <div
-                                    className="w-3 h-3 rounded-full border"
-                                    style={{ backgroundColor:colorNameToHex(original_attributes?.Color) || "#ccc" }}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-sm mt-1">
-                              {formatCurrency(item.sale_price)} x {item.qty}
-                            </p>
-                          </div>
-                          <div className="mt-2 sm:mt-0 sm:text-right">
-                            <p className="font-medium">{formatCurrency(item.sale_price * item.qty)}</p>
-
-                            {/* Return/Exchange Options */}
-                            {order.delivery_status !== "Delivered" && !checkIfReturnDateExpired && !item.return_id && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm" className="mt-2">
-                                    <RefreshCcw className="h-4 w-4 mr-1" /> Return Options
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem asChild>
-                                    <Link
-                                      href={`/customer/orders/${order.orderId}/returns?itemId=${item.order_item_id}`}
-                                    >
-                                      Return Item
-                                    </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/customer/orders/${order.orderId}/exchange?itemId=${item.order_item_id}`}>
-                                      Exchange Item
-                                    </Link>
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-
-                            {item.return_id && (
-                              <Badge variant="outline" className="mt-2 bg-primary text-white border-none">
-                                {item.delivery_status}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                                                              
+                    return  <OrderItemCard key={index}  item={item} index={index} imageBaseUrl={ image_base_url} 
+                    orderId={order.id} orderUid={orderId} />
 })}
 
                   <div className="pt-4 space-y-2">
@@ -476,13 +383,13 @@ if(error){
           </Card>
         </div>
 
-        <div>
+        {/* <div>
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Order Status</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="space-y-6">
+               <div className="space-y-6 h-[300px] overflow-y-auto">
                 {order.timelines && Array.isArray(order.timelines) && order?.timelines?.map((update, index) => (
                   <div key={index} className="relative pl-8">
                     {index !== order.timelines.length - 1 && (
@@ -516,7 +423,7 @@ if(error){
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
     </div>
   )

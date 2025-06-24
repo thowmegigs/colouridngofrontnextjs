@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/app/providers/auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowLeft, LayoutDashboard, LogOut, MapPin, ShoppingBag, User } from "lucide-react"
+import { ArrowLeft, CreditCard, LayoutDashboard, LogOut, MapPin, ShoppingBag, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type React from "react"
@@ -37,6 +37,11 @@ const {user}=useAuth()
       title: "Addresses",
       path: "/customer/addresses",
       icon: <MapPin size={20} />,
+    },
+    {
+      title: "Payment Method",
+      path: "/customer/payment",
+      icon: <CreditCard  size={20} />,
     },
    
     {
