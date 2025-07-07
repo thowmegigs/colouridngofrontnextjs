@@ -115,7 +115,7 @@ export default function CollectionPage({ slug }: CategoryPageProps) {
     queryFn: () => fetchColletionCatAndBrandOption(slug),
     staleTime: 30000
   })
-  console.log('op',options)
+ 
   const filterString = useMemo(() => {
     const params = new URLSearchParams()
     params.append("sort_by", sortBy)
@@ -135,7 +135,7 @@ export default function CollectionPage({ slug }: CategoryPageProps) {
   }, [priceRange, filterParams, sortBy])
 
   const {
-    data: product_list,
+    data: product_list, 
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,

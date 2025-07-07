@@ -275,7 +275,7 @@ if(error){
                              const imageurl = item.variant_id
                                              ? `${image_base_url}/storage/products/${item.product_id}/variants/${item.variant_image}`
                                                                     : `${image_base_url}/storage/products/${item.product_id}/${item.product_image}`
-                                const original_attributes=item.original_atributes?JSON.parse(item.original_atributes):null
+                    const original_attributes=item.original_atributes?JSON.parse(item.original_atributes):null
                     const exchange_attributes=item.exchange_atributes?JSON.parse(item.exchange_atributes):null
                  
 
