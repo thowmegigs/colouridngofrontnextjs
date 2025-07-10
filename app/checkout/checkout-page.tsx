@@ -642,7 +642,7 @@ useEffect(()=>{
                       .map((address) => (
                         <div
                           key={address.id}
-                          className={`border rounded-lg p-4 ${selectedAddress === address.id ? "border-primary bg-primary/5" : ""
+                          className={`border rounded-lg p-4 ${selectedAddress === address.id ? "border-primary bg-primary/7" : ""
                             }`}
                           onClick={() => setSelectedAddress(address.id)}
                         >
@@ -729,7 +729,7 @@ useEffect(()=>{
                             .map((address) => (
                               <div
                                 key={address.id}
-                                className={`border rounded-lg p-4 ${selectedBillingAddress === address.id ? "border-primary bg-primary/5" : ""
+                                className={`border rounded-lg p-4 ${selectedBillingAddress === address.id ? "border-primary bg-primary/7" : ""
                                   }`}
                                 onClick={() => setSelectedBillingAddress(address.id)}
                               >
@@ -966,7 +966,7 @@ useEffect(()=>{
 
               <RadioGroup value={deliveryOption} onValueChange={setDeliveryOption} className="space-y-3">
                 <div
-                  className={`border rounded-lg p-4 ${deliveryOption === "Standard" ? "border-primary bg-primary/5" : ""
+                  className={`border rounded-lg p-4 ${deliveryOption === "Standard" ? "border-primary bg-primary/7" : ""
                     }`}
                   onClick={() => setDeliveryOption("Standard")}
                 >
@@ -987,7 +987,7 @@ useEffect(()=>{
                 </div>
 
                 <div
-                  className={`border rounded-lg p-4 ${deliveryOption === "Express" ? "border-primary bg-primary/5" : ""
+                  className={`border rounded-lg p-4 ${deliveryOption === "Express" ? "border-primary bg-primary/7" : ""
                     }`}
                   onClick={() => setDeliveryOption("Express")}
                 >
@@ -1008,7 +1008,7 @@ useEffect(()=>{
                 </div>
 
                 <div
-                  className={`border rounded-lg p-4 ${deliveryOption === "Same-day" ? "border-primary bg-primary/5" : ""
+                  className={`border rounded-lg p-4 ${deliveryOption === "Same-day" ? "border-primary bg-primary/7" : ""
                     }`}
                   onClick={() => setDeliveryOption("Same-day")}
                 >
@@ -1110,7 +1110,7 @@ useEffect(()=>{
                       razorpayOrderId={orderResponse.razorpayOrderId || ""}
                       amount={orderResponse.amount}
                       name={user?.name || "Customer"}
-                      // email={userData.email || ""}
+                       customerEmail={user?.email || ""}
                       customerPhone={user?.phone}
                       onSuccess={handlePaymentSuccess}
                       onFailure={handlePaymentFailure}
@@ -1128,7 +1128,7 @@ useEffect(()=>{
                   className="space-y-3"
                 >
                   <div
-                    className={`border rounded-lg p-4 ${paymentMethod === "razorpay" ? "border-primary bg-primary/5" : ""
+                    className={`border rounded-lg p-4 ${paymentMethod === "razorpay" ? "border-primary bg-primary/7" : ""
                       }`}
                     onClick={()=>setPaymentMethod("razorpay")}
                   >
@@ -1161,7 +1161,7 @@ useEffect(()=>{
                   </div>
 
                   <div
-                    className={`border rounded-lg p-4 ${paymentMethod === "cod" ? "border-primary bg-primary/5" : ""}`}
+                    className={`border rounded-lg p-4 ${paymentMethod === "cod" ? "border-primary bg-primary/7" : ""}`}
                     onClick={()=>setPaymentMethod("cod")}
                   >
                     <div className="flex items-start">
@@ -1299,10 +1299,10 @@ useEffect(()=>{
                       <div  className="flex">
                       <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
                         <SafeImage
-                          src={item.variantId
-                            ? `${image_base_url}/storage/products/${item.id}/variants/${item.image}`
-                            : `${image_base_url}/storage/products/${item.id}/${item.image}`
-                          }
+                          src={item.variantId && item.color
+                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/tiny_${item.image}`
+                          : `${image_base_url}/storage/products/${item.id}/thumbnail/tiny_${item.image}`
+                        }
                           alt={item.name}
                           width={64}
                           height={64}
@@ -1478,7 +1478,7 @@ useEffect(()=>{
                         .map((address) => (
                           <div
                             key={address.id}
-                            className={`border rounded-lg p-4 ${selectedAddress === address.id ? "border-primary bg-primary/5" : ""
+                            className={`border rounded-lg p-4 ${selectedAddress === address.id ? "border-primary bg-primary/7" : ""
                               }`}
                           >
                             <div className="flex items-start">
@@ -1556,7 +1556,7 @@ useEffect(()=>{
                               .map((address) => (
                                 <div
                                   key={address.id}
-                                  className={`border rounded-lg p-4 ${selectedBillingAddress === address.id ? "border-primary bg-primary/5" : ""
+                                  className={`border rounded-lg p-4 ${selectedBillingAddress === address.id ? "border-primary bg-primary/7" : ""
                                     }`}
                                 >
                                   <div className="flex items-start">
@@ -1786,7 +1786,7 @@ useEffect(()=>{
                   className="space-y-4"
                 >
                   <div
-                    className={`border rounded-lg p-4 ${paymentMethod === "razorpay" ? "border-primary bg-primary/5" : ""
+                    className={`border rounded-lg p-4 ${paymentMethod === "razorpay" ? "border-primary bg-primary/7" : ""
                       }`}
                   >
                     <div className="flex items-start">
@@ -1812,7 +1812,7 @@ useEffect(()=>{
                   </div>
 
                   <div
-                    className={`border rounded-lg p-4 ${paymentMethod === "cod" ? "border-primary bg-primary/5" : ""}`}
+                    className={`border rounded-lg p-4 ${paymentMethod === "cod" ? "border-primary bg-primary/7" : ""}`}
                   >
                     <div className="flex items-start">
                       <RadioGroupItem value="cod" id="payment-cod" className="mt-1" />
@@ -1918,10 +1918,10 @@ useEffect(()=>{
                             <div className="flex">
                               <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
                                 <SafeImage
-                                  src={item.variantId
-                                    ? `${image_base_url}/storage/products/${item.id}/variants/${item.image}`
-                                    : `${image_base_url}/storage/products/${item.id}/${item.image}`
-                                  }
+                                  src={item.variantId && item.color
+                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/tiny_${item.image}`
+                          : `${image_base_url}/storage/products/${item.id}/thumbnail/tiny_${item.image}`
+                        }
                                   alt={item.name}
                                   width={64}
                                   height={64}

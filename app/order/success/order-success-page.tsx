@@ -178,7 +178,7 @@ export default function OrderSuccessPage() {
               <h3 className="font-medium mb-4">Order Items</h3>
               <ul className="space-y-4">
                 {order.items && order.items.length>0 && order.items.map((item: any,index:number) => {
-                  const imageurl = item.variant_id
+                  const imageurl = item.variant_id && item.color
                     ? `${image_base_url}/storage/products/${item.product_id}/variants/${item.variant_image}`
                     : `${image_base_url}/storage/products/${item.product_id}/${item.product_image}`
                   return <li key={item.id+index} className="flex">

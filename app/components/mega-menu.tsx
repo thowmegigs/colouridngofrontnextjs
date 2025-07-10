@@ -66,13 +66,13 @@ export default function MegaMenu({ categories, slug, onClose, className = "" }: 
               {column.map((subcat: any) => (
                 <ul key={subcat.id} className="mb-4">
                   <li>
-                    <Link
-                      href={`/category/${subcat.slug}`}
-                      className="text-2sm font-medium text-primary hover:underline"
+                    <p
+                      //href={`/category/${subcat.slug}`}
+                      className="text-2sm font-medium text-primary"
                       onClick={onClose}
                     >
                       {subcat.name}
-                    </Link>
+                    </p>
                   </li>
                   {subcat.children.map((child: any) => (
                     <li key={child.id}>

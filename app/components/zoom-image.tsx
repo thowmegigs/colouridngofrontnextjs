@@ -65,7 +65,10 @@ export function ZoomImage({ src, alt, width, height, className }: ZoomImageProps
   const openFullScreen = () => {
     setShowFullScreen(true)
   }
-
+// const baseimage=getImageName(src)
+// const newname=src.includes('/variants')
+//        ?`${image_base_url}/storage/products/${product_id}/variants/thumbnail/large_${baseimage}`
+//        :`${image_base_url}/storage/products/${product_id}/thumbnail/large_${baseimage}`
   return (
     <>
       <div

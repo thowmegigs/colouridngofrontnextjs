@@ -90,8 +90,9 @@ export const fetchStates = async () => {
 }
 export const fetchContentSections = async () => {
   const res = await axios.get(`${api_url}/content_sections`)
-  return res.data.data
+  return res.data
 }
+
 export const fetchProductsByCategory = async (slug: string, filterString: string, page: number = 1) => {
   const { data } = await axios.get(`${api_url}/products/category/${slug}?${filterString}&page=${page}`);
   return data;

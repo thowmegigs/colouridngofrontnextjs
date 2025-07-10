@@ -74,3 +74,7 @@ export function formatDate(dateString: string): string {
 export function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
+export function getImageName (url) {
+  if (!url) return "";
+  return url.substring(url.lastIndexOf("/") + 1);
+};

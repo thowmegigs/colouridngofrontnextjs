@@ -17,8 +17,8 @@ sale_price: number
   
   vendorName?: string,
   variantId?: number,
-  maxQuantityAllowed: number,
- stock:number,
+//   maxQuantityAllowed: number,
+//  stock:number,
  
 }
 

@@ -64,6 +64,7 @@ export default function HeroSlider() {
                 alt={`Slide ${index + 1}`}
                 layout="fill"
                 
+                
               />
             </div>
           </Link>

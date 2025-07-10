@@ -3,6 +3,7 @@
 import { AuthModal } from "@/app/components/auth-modal"
 import { AvailableCouponsModal } from "@/app/components/available-coupons-modal"
 import ImageGalleryWithZoom from "@/app/components/ImageGalleryWithZoom"
+import RelatedProductCarousel from "@/app/components/related-product-carousel"
 import { ReviewForm } from "@/app/components/review-form"
 import { ReviewImageGallery } from "@/app/components/review-image-gallery"
 import SafeImage from "@/app/components/SafeImage"
@@ -27,19 +28,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   AlertCircle,
   Box,
-  Check,
   Clock,
   HandCoins,
   ImageIcon,
-  Minus,
-  Plus,
   RotateCcw,
   Share2,
   ShoppingCart,
   Star,
-  Tag,
-  Truck,
-  X
+  Tag
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -612,17 +608,17 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
     )
   }
   return (
-    <div className="container ">
+    <div className="container p-0 m-0">
       <div className="grid grid-cols-1 md:grid-cols-[35%_65%] md:gap-8">
         {/* Product Images */}
         <div className="">
           <div className="rounded-sm  bg-transparent ">
-            {!isMobile ? <ZoomImage
+            {!isMobile ? <ZoomImage 
               src={`${image_base_url}${variantImages[activeImage]}`}
               alt={product.name}
               width={600}
               height={700}
-              className="w-full aspect-square"
+              className="w-full"
             /> :
               <ImageGalleryWithZoom images={variantImages} selectedVariant={selectedVariant} product={product} activeImage={activeImage} />
             }
@@ -640,7 +636,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
 
                   src={`${image_base_url}${image}`}
                   alt={`${product.name} - Image ${index + 1}`}
-                  width={80}
+                  width={100}
                   height={80}
                   className="w-20 h-20 object-cover"
                 />
@@ -905,7 +901,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
 
                 {selectedVariant ? <span className="font-medium">Selected Variant: <span className="font-bold">{selectedVariant.name}</span></span> : ""}
               </div>
-              <div className="text-sm mt-1">
+              {/* <div className="text-sm mt-1">
                 <span className="font-medium">Stock:</span>{" "}
                 <span className="font-bold">{selectedVariant ? selectedVariant.quantity : product.quantity} </span> available
               </div>
@@ -927,10 +923,10 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
                 <div className="text-sm mt-1 text-red-600">
                   <span className="font-medium">Out of Stock</span>
                 </div>
-              )}
+              )} */}
             </div>
 
-            <div>
+            {/* <div>
               <Label htmlFor="quantity" className="text-base font-medium mb-2 block">
                 Quantity
               </Label>
@@ -966,7 +962,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
                   <span className="sr-only">Increase quantity{quantity}</span>
                 </Button>
               </div>
-            </div>
+            </div> */}
 
             <div className="hidden md:flex flex-col sm:flex-row gap-4">
               <Button
@@ -1026,10 +1022,10 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
                 </div>
 
               }
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <Truck className="w-4 h-4" />
                 <span>Free shipping above <span className="font-bold">₹500</span></span>
-              </div>
+              </div> */}
               <div className="flex items-center space-x-2">
                 <HandCoins className="w-4 h-4" />
                 <span>Cash on delivery available</span>
@@ -1065,14 +1061,15 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
                           <td className="px-4 py-3">{product.category}</td>
                         </tr>
                         {product.facet_attributes?.length > 0 &&
-                          product.facet_attributes.map((item, index) => (
-                            <tr key={index} className="border-b border-border">
+                          product.facet_attributes.map((item, index) =>{
+                             if(item.name==='Size' || item.name==='Color') return null
+                           return  <tr key={index} className="border-b border-border">
                               <th className="px-4 py-3 text-left font-medium text-muted-foreground border-r border-border w-1/3">
                                 {item.name}
                               </th>
                               <td className="px-4 py-3">{item.value}</td>
                             </tr>
-                          ))}
+})}
                       </tbody>
                     </table>
                   </div>
@@ -1204,10 +1201,12 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
 
 
       {/* Similar Products */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
-        {/* <ProductCarousel type="featured" /> */}
-      </div>
+       {product.relatedProducts.length > 0 &&
+        (<div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
+          <RelatedProductCarousel products={product.relatedProducts} />
+        </div>)
+}
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-30">
         <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3 gap-1">
 
@@ -1221,7 +1220,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
             onClick={handleBuyNow}
            disabled={selectedVariant ? selectedVariant.quantity <= 0 : product?.quantity <= 0}
 
-            className="w-full flex items-center justify-center gap-2 px-2 bg-black text-white py-4  disabled:opacity-50 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-2 bg-black text-white py-2  disabled:opacity-50 transition-colors"
           >
            BUY NOW
           </button>
@@ -1230,7 +1229,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
           <button onClick={handleAddToCart}
             disabled={selectedVariant ? selectedVariant.quantity <= 0 : product?.quantity <= 0}
 
-            className="w-full justify-center flex items-center gap-2 bg-primary text-white px-4 py-4   transition-colors disabled:opacity-50">
+            className="w-full justify-center flex items-center gap-2 bg-primary text-white px-4 py-2   transition-colors disabled:opacity-50">
             <ShoppingCart className="w-5 h-6" />
             ADD TO CART
           </button>
@@ -1262,66 +1261,10 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
         </Dialog>
       )}
 
-      {showAlert && product && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center pb-5 px-4">
-          <div
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 max-w-md w-full transform transition-all duration-300 ease-out animate-in slide-in-from-top-4"
-            style={{
-              animation: "slideInFromTop 0.3s ease-out",
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <Check className="w-5 h-5 text-green-600" />
-                </div>
-                <h3 className="font-semibold text-lg text-gray-900">Added to Cart!</h3>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowlaert(false)} className="h-8 w-8 p-0 hover:bg-gray-100">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {/* Product Details */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="relative">
-                <SafeImage
-                  src={`${image_base_url}/storage/products/${product.id}/thumbnail/${product.image}`}
-                  alt={product.name}
-                  width={80}
-                  height={80}
-                  className="w-20 h-20 object-cover rounded-xl border-2 border-gray-100"
-                />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-900 mb-1 line-clamp-2">{product.name}</h4>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(product.sale_price * quantity)}</p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={closeAlert} className="flex-1">
-                Continue Shopping
-              </Button>
-              <Button
-                onClick={() => {
-                  router.push('/cart')
-                }}
-                className="flex-1 bg-black hover:bg-gray-800"
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                View Cart
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+     
 
       {/* Backdrop */}
-      {showAlert && <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={closeAlert} />}
-
+    
       {/* Review Form Modal */}
       <Dialog open={showReviewForm} onOpenChange={setShowReviewForm}>
         <DialogContent className="sm:max-w-lg">

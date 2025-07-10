@@ -352,14 +352,14 @@ export default function CartPage() {
               <div className="w-[110px] h-full rounded overflow-hidden flex-shrink-0 mr-3 bg-gray-100 dark:bg-gray-800">
                 <SafeImage
                   fallbackSrc="/placeholder.png"
-                  src={item.variantId
-                    ? `${image_base_url}/storage/products/${item.id}/variants/${item.image}`
-                    : `${image_base_url}/storage/products/${item.id}/${item.image}`
-                  }
+                  src={item.variantId && item.color
+                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/small_${item.image}`
+                          : `${image_base_url}/storage/products/${item.id}/thumbnail/small_${item.image}`
+                    }
                   alt={item.name}
                   width={64}
                   height={64}
-                  className="w-full h-[150px] object-fit"
+                  className="w-full h-[170px] object-fit"
                 />
               </div>
 
@@ -606,14 +606,14 @@ export default function CartPage() {
                     <div className="sm:w-24 sm:h-24 mb-4 sm:mb-0 sm:mr-6 flex-shrink-0">
                       <SafeImage
                         fallbackSrc="/placeholder.png"
-                        src={item.variantId
-                          ? `${image_base_url}/storage/products/${item.id}/variants/${item.image}`
-                          : `${image_base_url}/storage/products/${item.id}/${item.image}`
-                        }
+                       src={item.variantId && item.color
+                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/small_${item.image}`
+                          : `${image_base_url}/storage/products/${item.id}/thumbnail/small_${item.image}`
+                    }
                         alt={item.name}
-                        width={64}
-                        height={64}
-                        className="w-full h-full object-cover"
+                        width={150}
+                        height={250}
+                        className="w-full h-auto object-fit"
                       />
                     </div>
 

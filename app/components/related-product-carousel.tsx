@@ -1,6 +1,5 @@
 "use client"
 
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useCart } from "../providers/cart-provider"
 import ProductCard from "./product-card"
@@ -11,17 +10,13 @@ type ProductCarouselProps = {
   section: any
 }
 
-export default function ProductCarousel({ section }: ProductCarouselProps) {
+export default function RelatedProductCarousel({ products }: any) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const { addItem } = useCart()
   const [visibleItems, setVisibleItems] = useState(4)
   const [autoScroll, setAutoScroll] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
-  const products = section.products1;
-  const type = section.display == 'Horizontal' ? 'horizontal' : 'vertical'
-  const title = section.section_title;
-  const sub_title = section.section_subtitle;
-  let viewAllLink = `/content_section/${section.id}`;
+  
 
   useEffect(() => {
     const handleResize = () => {
@@ -42,15 +37,15 @@ export default function ProductCarousel({ section }: ProductCarouselProps) {
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
-  useEffect(() => {
-    if (!autoScroll) return
+  // useEffect(() => {
+  //   if (!autoScroll) return
 
-    const interval = setInterval(() => {
-      scroll("right")
-    }, 5000)
+  //   const interval = setInterval(() => {
+  //     scroll("right")
+  //   }, 5000)
 
-    return () => clearInterval(interval)
-  }, [autoScroll, currentIndex])
+  //   return () => clearInterval(interval)
+  // }, [autoScroll, currentIndex])
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
@@ -69,7 +64,7 @@ export default function ProductCarousel({ section }: ProductCarouselProps) {
   }
 
 
-  const isHorizontal = type=='horizontal'?true:false
+  const isHorizontal =true
 
 
   return (
@@ -83,33 +78,13 @@ export default function ProductCarousel({ section }: ProductCarouselProps) {
         onMouseLeave={() => setAutoScroll(true)}
       >
         {products && Array.isArray(products) && products.map((product: any) => (
-          <div key={product.id} className={`${isHorizontal ? "w-[200px] sm:w-[250px] flex-shrink-0" : ""} group`}>
+          <div key={product.id} className={`${isHorizontal ? "w-[220px] flex-shrink-0" : ""} group`}>
             <ProductCard {...product} vendorName={product.brand??'True Color'} />
           </div>
         ))}
       </div>
 
-      {!isHorizontal && (
-        <div className="hidden md:block">
-          <button
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background border shadow-sm flex items-center justify-center hover:bg-muted disabled:opacity-50"
-            onClick={() => scroll("left")}
-            disabled={currentIndex === 0}
-          >
-            <ChevronLeft className="h-6 w-6" />
-            <span className="sr-only">Scroll left</span>
-          </button>
-
-          <button
-            className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background border shadow-sm flex items-center justify-center hover:bg-muted disabled:opacity-50"
-            onClick={() => scroll("right")}
-            disabled={currentIndex >= products.length - visibleItems}
-          >
-            <ChevronRight className="h-6 w-6" />
-            <span className="sr-only">Scroll right</span>
-          </button>
-        </div>
-      )}
+     
 
      
     </div>

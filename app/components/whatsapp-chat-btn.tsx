@@ -15,9 +15,9 @@ const WhatsAppChatButton = ({ phone = "+919991110716", message = "Hello!" }) => 
       rel="noopener noreferrer"
       
     >
-      <Image alt="whatap-icon" src={isMobile?'/whatsapp.svg':'/whatsapp_white.svg'} 
-      width={isMobile?20:25}
-      height={isMobile?20:25}
+      <Image alt="whatap-icon" src={'/whatsapp.png'} 
+      width={45} 
+      height={45}
        />
     </a>
   );

@@ -46,9 +46,9 @@ export default function CartDrawer() {
                     <div className="w-[115px] h-24  ">
                       <SafeImage
                         fallbackSrc="/placeholder.png"
-                        src={item.variantId
-                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/large_${item.image}`
-                          : `${image_base_url}/storage/products/${item.id}/thumbnail/large_${item.image}`
+                        src={item.variantId && item.color
+                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/tiny_${item.image}`
+                          : `${image_base_url}/storage/products/${item.id}/thumbnail/tiny_${item.image}`
                         }
                         alt={item.name}
                         width={64}

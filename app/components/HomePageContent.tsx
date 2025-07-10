@@ -3,17 +3,17 @@
 import { useMobile } from "@/hooks/use-mobile"
 import { fetchContentSections } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronRight } from "lucide-react"
-import Link from "next/link"
 import { useInView } from "react-intersection-observer"
 import BannerSection from "./BannerSection "
 import CategoryCircles from "./category-circles"
 import CategoryGrid from "./category-grid"
 import CollectionBanners from "./collection-banners"
+import DynamicPreload from "./DynamicPreload"
+import ErrorPage from "./Error"
 import OffersSection from "./offers-section"
 import ProductCarousel from "./product-carousel"
 import ProductCarouselCollection from "./product-carousel-collection"
-import SafeImage from "./SafeImage"
+import SectionHeader from "./section-header"
 import Slider from "./slider"
 import VideoSlider from "./video-slider"
 const HomePageSkeleton = () => {
@@ -66,53 +66,38 @@ export default function HomePageContent() {
         return <HomePageSkeleton />
     }
 
-    if (!content_sections?.length) {
-        return <div>No slides available</div>
+    if (!content_sections?.data.length) {
+        return <ErrorPage /> 
     }
+    let apiData=content_sections?.imageUrls??null
+const assets = apiData?[
+    ...apiData.images.map((url: string) => ({ url, type: "image" as const })),
+    ...apiData.videos.map((url: string) => ({ url, type: "video" as const })),
+  ]:[]
 
-    return (content_sections.map((section: any, index: number) => {
+    return <>
+    {assets.length>0 &&  <DynamicPreload assets={assets} />}
+    {content_sections.data.map((section: any, index: number) => {
         let content = null;
 
         switch (section.content_type) {
             case "Slider":
-                content = section.slider_data ? <div className="flex flex-col items-center justify-center mb-6">
-                    {section.show_header=='Yes' && (
-                        section.header_image ?
-                            <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
-                            : (<>
-                                <h2 className="text-2md md:text-2xl font-bold">{section.section_title}</h2>
-                                {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
-                            </>))
-                    }
-                    <Slider section_data={section} /></div> : null;
+                content = section.slider_data ? <div>
+                    <SectionHeader section={section} />
+                    <Slider section_data={section.slider_data} /></div> : null;
                 break;
             case "Coupons":
                 content = <OffersSection data={section} />;
                 break;
             case "Banner":
-                content = section.banner_data ? <div className="flex flex-col items-center justify-center mb-6">
-                    {section.show_header=='Yes' && (
-                        section.header_image ?
-                            <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
-                            : (<>
-                                <h2 className="text-2md md:text-2xl font-bold">{section.section_title}</h2>
-                                {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
-                            </>))
-                    }
+                content = section.banner_data ? <div className="flex flex-col items-center justify-center">
+                    <SectionHeader section={section} />
                     <BannerSection banners={section.banner_data} /></div> : null;
                 break;
             case "Video":
 
-                content = <div className="flex flex-col items-center justify-center mb-3">
-                    {section.show_header=='Yes' && (
-                        section.header_image ?
-                            <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
-                            : (<>
-                                <h2 className="text-2md md:text-2xl font-bold">{section.section_title}</h2>
-                                {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
-                            </>))
-                    }
-
+                content = <div className="flex flex-col items-center justify-center">
+                    <SectionHeader section={section} />
                     <VideoSlider data={section} /> </div>;
                 break;
             case "Categories":
@@ -129,20 +114,8 @@ export default function HomePageContent() {
             case "Products":
                 content = section.products1 ? (
                     <>
-                        <div className="flex items-center justify-between mb-3">
-                            {section.show_header=='Yes' && (
-                                section.header_image ?
-                                    <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
-                                    : (<>
-                                        <h2 className="text-2sm md:text-2xl font-bold">{section.section_title}</h2>
-                                        {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
-                                    </>))
-                            }
-
-                            {/* <Link href="/new-arrivals" className="text-xs md:text-sm font-medium text-primary flex items-center">
-                                            View All
-                                            <ChevronRight className="h-4 w-4 ml-1" />
-                                        </Link> */}
+                        <div className="flex items-center justify-center">
+                            <SectionHeader section={section} />
                         </div>
                         <ProductCarousel section={section} />
                     </>
@@ -152,29 +125,22 @@ export default function HomePageContent() {
                 if (section.collection_products_when_single_collection_set) {
                     content = (
                         <>
-                            <div className="flex items-center justify-between mb-3">
-                                {section.show_header=='Yes' && (
-                                    section.header_image ?
-                                        <SafeImage width={40000} alt="" src={section.header_image} height={0} className="w-full h-100 object-fit" />
-                                        : (<>
-                                            <h2 className="text-2sm md:text-2xl font-bold">{section.section_title}</h2>
-                                            {section.section_subtitle && <h2 className="text-sm md:text-sm font-normal">{section.section_subtitle}</h2>}
-                                        </>)
-                                 )
-                                }
-                                <Link href={`/collection/${section.collections1[0]['slug']}`} className="text-xs md:text-sm font-medium text-primary flex items-center">
-                                    View All
-                                    <ChevronRight className="h-4 w-4 ml-1" />
-                                </Link>
+                            <div className="flex items-center justify-center">
+                                <SectionHeader section={section} />
                             </div>
                             <ProductCarouselCollection section={section} />
                         </>
                     );
                 } else {
-                    // content = section.collection1 ? (section.display === 'Vertical'
-                    //     ? <MasonryGrid />
-                    //     : <CollectionBanners data={section} />) : null;
-                    content = <CollectionBanners data={section} />;
+                    content = (
+                        <>
+                            <div className="flex items-center justify-center">
+                                <SectionHeader section={section} />
+                            </div>
+                            <CollectionBanners data={section} />
+                        </>
+                    );
+
                 }
                 break;
             default:
@@ -188,7 +154,7 @@ export default function HomePageContent() {
                     key={index}
                     // className={`container !my-7 !p-0 transition-opacity duration-1000 ease-out ${inView ? "animate-in slide-in-from-bottom fade-in" : "opacity-0"
                     //     }`}
-                    className={`container !my-2 !p-0 transition-opacity duration-1000 ease-out opacity-0"
+                    className={`container  !my-3 md:!my-6 !p-0 transition-opacity duration-1000 ease-out opacity-0"
                         }`}
                 >
                     {content}
@@ -196,8 +162,8 @@ export default function HomePageContent() {
 
             )
         );
-    })
-    )
+    })}
+    </>
 
 
 }

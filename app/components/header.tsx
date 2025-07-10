@@ -252,18 +252,28 @@ const menuMouseEvent=()=>{
                 </>
               ) : (
                 <Link href="/" className="flex items-center">
-                  <Image src="/images/logo.png" alt="Colour Indigo" width={140} height={130} className="h-9 md:h-20 w-auto" />
-                </Link>
+                   <Image src="/images/logo.png" alt="Colour Indigo" width={110} height={130}  />                </Link>
               )}
             </div>
+             {pathname === '/' &&
+                  <div className="relative cursor-text w-full" onClick={() => setShowMobileSearch(true)}>
+                    <input
+                      type="text"
+                      placeholder="Search products.."
+                      readOnly
+                      className="w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
+                    />
+                    <Search className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                  </div>
+
+                }
             <div className="flex items-center gap-1">
+              {pathname === '/' &&
               <WhatsAppChatButton />
+              }
 
 
-              <Button variant="ghost"  onClick={handleShowMobilePopup} className="relative">
-                <Search />
-
-              </Button>
+              
               {(pathname.includes('/product') || pathname.includes('/category') || pathname.includes('/collection')) &&
                 <>
                   <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)} className="relative">
@@ -288,18 +298,7 @@ const menuMouseEvent=()=>{
 
             </div>
 
-            {/* {pathname === '/' &&
-                  <div className="relative cursor-text w-full" onClick={() => setShowMobileSearch(true)}>
-                    <input
-                      type="text"
-                      placeholder="Search products.."
-                      readOnly
-                      className="w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
-                    />
-                    <Search className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                  </div>
-
-                } */}
+           
 
 
           </div>
@@ -326,7 +325,7 @@ const menuMouseEvent=()=>{
             <div className="flex-1 overflow-y-auto px-4 py-6">
               <InstantSearch searchClient={searchClient} indexName="categories">
                 <div className="flex flex-col gap-3">
-                  <CustomSearchBox setOpen={(v) => setIsOpen(v)} />
+                  <CustomSearchBox setOpen={(v) => setShowSearch(v)} />
                   <div className="flex-1 overflow-y-auto">
                     <SearchResults />
                   </div>

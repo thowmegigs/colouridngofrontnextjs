@@ -80,7 +80,7 @@ export default function ProductCard({
         description: `Product removed from your wishlist`,
       })
     } else {
-     
+
       addItem({
         id,
         name,
@@ -111,17 +111,16 @@ export default function ProductCard({
     <div className="relative">
 
       <Link href={`/product/${name_slug}`}>
-        <div className="w-full relative h-[280px] sm:h-[330px] overflow-hidden">
-
+        <div className="w-full relative h-[280px] sm:h-[330px] overflow-hidden group">
           <SafeImage
             src={image}
             alt={name}
-            width={280}
-            height={280}
-
-            className="w-full h-full object-fit transition-transform duration-500 group-hover:scale-110"
+            width={600} // use the maximum expected image width for desktop
+            height={600} // maintain aspect ratio
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
         </div>
       </Link>
 
