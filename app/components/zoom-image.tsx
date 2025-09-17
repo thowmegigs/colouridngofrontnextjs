@@ -85,7 +85,7 @@ export function ZoomImage({ src, alt, width, height, className }: ZoomImageProps
           width={width}
           priority={false}
           height={height}
-          className="w-full h-[600px] object-fit transition-transform duration-200"
+          className="w-full h-[600px]  transition-transform duration-200"
           style={{
             transform: isZoomed ? "scale(1.2)" : "scale(1)",
             transformOrigin: `${position.x}% ${position.y}%`,

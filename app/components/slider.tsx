@@ -1,6 +1,5 @@
 "use client"
 
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import SafeImage from "./SafeImage"
@@ -56,7 +55,7 @@ export default function Slider({section_data}) {
         </div>
       ))}
 
-      <button
+      {/* <button
         className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50"
         onClick={prevSlide}
       >
@@ -71,6 +70,7 @@ export default function Slider({section_data}) {
         <ChevronRight className="h-6 w-6" />
         <span className="sr-only">Next slide</span>
       </button>
+     */}
 
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-2 rounded-full bg-white py-1 px-2">
         {data.map((_, index) => (

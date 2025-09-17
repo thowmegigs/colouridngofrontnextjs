@@ -8,7 +8,9 @@ import { useMobile } from "@/hooks/use-mobile"
 import {
   ChevronRight,
   ClipboardList,
+  CreditCard,
   Heart,
+  HelpCircle,
   Home,
   HomeIcon,
   LogOut,
@@ -58,10 +60,11 @@ const isMobile=useMobile()
         { icon: <Package className="h-5 w-5" />, label: "My Orders", href: "/customer/orders" },
         { icon: <User2 className="h-5 w-5" />, label: "Profile", href: "/customer/profile", },
          { icon: <MapPin className="h-5 w-5" />, label: "Saved Addresses", href: "/customer/addresses" },
-        // { icon: <CreditCard className="h-5 w-5" />, label: "Payment Methods", href: "/account/payment" },
+         { icon: <CreditCard className="h-5 w-5" />, label: "Payment Methods", href: "/customer/payment" },
+          { icon: <HelpCircle className="h-5 w-5" />, label: "Help & Support", href: "/customer/help" },
       ],
     },
-    {
+    { 
       title: "Policy",
       items: [
          { icon: <Package className="h-5 w-5" />, label: "Shipping Policy", href: "/shipping_policy" },
@@ -73,7 +76,7 @@ const isMobile=useMobile()
    
   ]
  
-const pathAr=['/cart','/category/','/product/','/collection/','/customer/','/checkout'];
+const pathAr=['/cart','/category/','/product/','/collection/','/customer/','/checkout','/auth/login','auth/register'];
  if(!isMobile ) return null
   const showSomething = pathAr.some((base) =>
     pathname.includes(base) 

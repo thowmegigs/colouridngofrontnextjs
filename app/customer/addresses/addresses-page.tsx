@@ -43,7 +43,7 @@ export default function AddressPage() {
   const [selectedCity, setSelectedCity] = useState<number>(0)
   const [cities, setCities] = useState<any>([])
   const [states, setStates] = useState<any>([])
-  const { updateProfile,user } = useAuth()
+  const { updateProfile, user } = useAuth()
   const [form, setForm] = useState<Omit<Address, "id">>({
     name: "",
     address1: "",
@@ -61,13 +61,14 @@ export default function AddressPage() {
   useEffect(() => {
     const getCitis = async () => {
       const resp = await fetchCities(selectedState as any)
+      const cities=resp?.data?.rows??[]
+      if(cities.length>0){
+      setCities(cities)
 
-      setCities(resp)
-
-      setSelectedCity(resp[0]['id'])
-      setForm((prev:any)=>{
-        return {...prev,city_id:resp[0]['id']}
-      })
+      setSelectedCity(cities[0]['id'])
+      setForm((prev: any) => {
+        return { ...prev, city_id: cities[0]['id'] }
+      })}
     }
     if (selectedState) {
       getCitis()
@@ -82,15 +83,19 @@ export default function AddressPage() {
         const userAddresses: any = await fetchUserAddresses()
 
         setAddresses(userAddresses.data.addresses)
-        const states: any = await fetchStates()
+        const r: any = await fetchStates()
+        const states = r?.data?.rows ?? [];
+        console.log('states', states)
+        if (states.length > 0) {
+          setStates(states)
+          setSelectedState(states[0]['id'])
+          setForm((prev: any) => {
+            return { ...prev, state_id: states[0]['id'] }
 
-        setStates(states)
-        setSelectedState(states[0]['id'])
-         setForm((prev:any)=>{
-        return {...prev,state_id:states[0]['id']}
-      })
+          })
+        }
       } catch (error) {
-
+        console.log('got error', error)
         showToast({
           title: "Error", description: "Failed to load your saved addresses.", variant: "destructive"
         })
@@ -100,50 +105,50 @@ export default function AddressPage() {
     }
     loadAddresses();
   }, [])
-console.log(form.state_id,form.city_id)
+ 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
-    
-    console.log(name,value,type)
+
+   
     setForm((prev) => ({
       ...prev,
-      [name]:name==='is_default'?(value=='on'?'Yes':'No'):value
+      [name]: name === 'is_default' ? (value == 'on' ? 'Yes' : 'No') : value
     }));
   };
 
   const handleSubmit = async () => {
-   
+
     const newAddress: Address = {
       id: editAddress ? editAddress.id : uuidv4(),
       ...form,
     };
-try{
-    if (editAddress) {
-      const response = await apiRequest(`addresses/${editAddress.id}`,{method:'PUT',requestData:newAddress })
-      console.log('res', response)
-      setAddresses((prev) =>
-        prev.map((a) => (a.id === editAddress.id ? newAddress : a))
-      );
-      showToast({description:"Address updated successfully"})
-      //    setTimeout(()=>{
-      //   location.reload()
-      // },2000)
-    } else {
-       const response = await apiRequest(`addresses/`,{method:'POST',requestData:newAddress })
-    
-      console.log('post res', response.data.addresses)
-      newAddress['id'] = response.data.addressId
-      setAddresses((prev) => [...prev, newAddress]);
-      showToast({description:"Address added successfully"})
+    try {
+      if (editAddress) {
+        const response = await apiRequest(`addresses/${editAddress.id}`, { method: 'PUT', requestData: newAddress })
+        console.log('res', response)
+        setAddresses((prev) =>
+          prev.map((a) => (a.id === editAddress.id ? newAddress : a))
+        );
+        showToast({ description: "Address updated successfully" })
+        //    setTimeout(()=>{
+        //   location.reload()
+        // },2000)
+      } else {
+        const response = await apiRequest(`addresses/`, { method: 'POST', requestData: newAddress })
+
+        console.log('post res', response.data.addresses)
+        newAddress['id'] = response.data.addressId
+        setAddresses((prev) => [...prev, newAddress]);
+        showToast({ description: "Address added successfully" })
+      }
+      setOpen(false)
+      resetForm()
+
+    } catch (error: any) {
+      showToast({ description: error['message'], variant: 'destructive' })
     }
-    setOpen(false)
-    resetForm() 
- 
-  }catch(error:any){
-   showToast({description:error['message'],variant:'destructive'})
-  }
 
     // resetForm();
     // setOpen(false);
@@ -155,7 +160,7 @@ try{
     setForm({ ...address });
     setOpen(true);
   };
- 
+
 
   const resetForm = () => {
     setEditAddress(null);
@@ -164,7 +169,7 @@ try{
       address1: "",
       address2: "",
       city_id: form.city_id,
-      state_id:  form.state_id,
+      state_id: form.state_id,
       city_name: form.city_name,
       state_name: form.state_name,
       pincode: "",
@@ -175,7 +180,7 @@ try{
   };
 
   const shippingAddresses = addresses.filter((a) => a.address_for === "Shipping");
- // const billingAddresses = addresses.filter((a) => a.address_for === "Billing");
+  // const billingAddresses = addresses.filter((a) => a.address_for === "Billing");
 
   return (
     <div className="p-6 space-y-8">
@@ -212,7 +217,7 @@ try{
                     }}
                     className="mt-2 border rounded px-2 py-1"
                   >
-                    {states.map((opt: any) => (
+                    {states.length > 0 && states.map((opt: any) => (
                       <option key={opt.id} value={opt.id} >
                         {opt.name.charAt(0).toUpperCase() + opt.name.slice(1)}
                       </option>
@@ -236,9 +241,9 @@ try{
                   </select>
                 </div>
               </div>
-            
+
               <div className="grid grid-cols-2 gap-3">
-                  <InputField label="Pincode" name="pincode" value={form.pincode} onChange={handleChange} />
+                <InputField label="Pincode" name="pincode" value={form.pincode} onChange={handleChange} />
 
                 <SelectField
                   label="Label"
@@ -247,7 +252,7 @@ try{
                   options={["Home", "Work"]}
                   onChange={handleChange}
                 />
-                
+
               </div>
 
               <div className="flex items-center gap-2 mt-2">
@@ -269,11 +274,11 @@ try{
       </div>
 
       <div>
-       
+
         <AddressGrid addresses={shippingAddresses} onEdit={handleEdit} />
       </div>
 
-     
+
     </div>
   );
 }
@@ -338,18 +343,18 @@ function AddressGrid({
   onEdit: (addr: Address) => void;
 }) {
   if (addresses.length === 0) return <p className="text-gray-500">No addresses found.</p>;
- const handleDelete = async (address: Address) => { 
-   try{
-    const resp=await apiRequest(`addresses/${address.id}`,{method:'DELETE'})
-      showToast({description:"Address deleted successfully"})
-      setTimeout(()=>{
+  const handleDelete = async (address: Address) => {
+    try {
+      const resp = await apiRequest(`addresses/${address.id}`, { method: 'DELETE' })
+      showToast({ description: "Address deleted successfully" })
+      setTimeout(() => {
         location.reload()
-      },2000)
+      }, 2000)
 
-   }
-   catch(error){
-    showToast({description:error['message'],variant:'destructive'})
-   }
+    }
+    catch (error) {
+      showToast({ description: error['message'], variant: 'destructive' })
+    }
   };
   return (
     <div className="grid md:grid-cols-2 gap-4">
@@ -389,7 +394,7 @@ function AddressCard({ address }: { address: Address }) {
       {address.address2 && <p>{address.address2}</p>}
       <p>
         {address.city_name}, {address.state_name} - {address.pincode}
-      </p> 
+      </p>
       <p className="mt-1 text-xs text-gray-600">
         {address.address_type} {address.is_default === 'Yes' && "(Default)"}
       </p>

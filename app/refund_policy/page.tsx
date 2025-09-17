@@ -1,5 +1,14 @@
+'use client';
+
+import { fetchSetting } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 const RefundPolicy = () => {
+   const { data: setting } = useQuery<any>({
+    queryKey: ["setting"],
+    queryFn: () => fetchSetting(),
+  
+  })
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 font-sans text-gray-700">
       {/* Header */}
@@ -20,10 +29,10 @@ const RefundPolicy = () => {
 
           <ul className="list-disc pl-6 space-y-2 text-gray-700 text-base">
             <li>
-              We have a <span className="font-medium">2-day return policy</span>, which means you have 2 days after receiving your item to request a return.
+              We have a <span className="font-medium">{setting?.return_days??3}-day return policy</span>, which means you have {setting?.return_days??3} days after receiving your item to request a return.
             </li>
             <li>
-              Once the returned product is received, it will be inspected and the return will be approved within 2 days.
+              Once the returned product is received, it will be inspected and the return will be approved within {setting?.return_days??3} days.
             </li>
             <li>
               We will notify you once we’ve received and inspected your return, and let you know if the refund was approved or not.

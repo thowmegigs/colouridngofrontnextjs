@@ -107,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(false)
       setUser(response.data.user)
+      setIsAuthenticated(true)
 
 
       return {
@@ -149,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
   const verifyUpdateOtp = async (otp: string | null, name: string, email: string, phone: string) => {
     try {
-      setIsLoading(true)
+   //   setIsLoading(true)
 
       const response = await apiRequest(
         'auth/verify-update-otp',
@@ -161,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
 
-      setIsLoading(false)
+     // setIsLoading(false)
       setUser(response.data.user)
 
 
@@ -172,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       }
     } catch (error) {
-      setIsLoading(false)
+    //  setIsLoading(false)
       throw new Error(error.message)
     }
   }

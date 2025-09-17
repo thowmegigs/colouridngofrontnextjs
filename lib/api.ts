@@ -156,6 +156,7 @@ export type ProductReview = {
   created_at: string
 }
 export type Coupon = {
+  id?: number
   code: string
   description: string
   discount_type: "Percent" | "Flat"
@@ -471,17 +472,18 @@ export async function saveAddress(address: Address, is_update: boolean): Promise
 }
 
 // Mock function to delete an address
-export async function deleteAddress(id: string): Promise<{ success: boolean; message: string }> {
+export async function deleteAddress(id: string):Promise<any> {
   // Mock implementation - replace with actual API call
-  return await axios.delete(`${api_url}/addresses/${id}`, {
-    data: {
-      user_id: "1"
-    }
-  })
+  try{
+  return await apiRequest(`addresses/${id}`, {method:"DELETE"})
+  }catch(error:any){
+     throw new Error(error.message) 
+  }
 
 
 }
 export type CouponInfo = {
+  id?:number,
   code: string
   discount: number
   discountType: "percentage" | "fixed"
@@ -536,10 +538,16 @@ export const fetchOrderById = async (orderId: string | number) => {
   });
   return response.data.data;
 };
+export const fetchSetting = async () => {
+  const response = await axios.get(`${api_url}/setting/`, {
+    withCredentials: true // Include cookies for auth
+  });
+  return response.data.data;
+};
 export const fetchProductVariantById = async (orderItemId: string | number) => {
   const response = await axios.get(`${api_url}/product_variants/${orderItemId}`, {
     withCredentials: true // Include cookies for auth
   });
 
-  return response.data;
+  return response.data.data;
 };

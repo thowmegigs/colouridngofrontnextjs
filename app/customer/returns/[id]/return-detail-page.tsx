@@ -1,21 +1,21 @@
 "use client"
 
-import { formatCurrency, formatDate, getStatusColor } from "@/app/lib/utils"
+import { formatCurrency, formatDate } from "@/app/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
-import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/hooks/use-toast"
 import { cancelReturn, getReturnById } from "@/lib/return-api"
 
+import ErrorPage from "@/app/components/Error"
+import OrderTimeline from "@/app/components/order-timeline"
+import { capitalize } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import {
   AlertCircle,
-  Calendar,
   CheckCircle,
   Clock,
-  CreditCard,
   ImageIcon,
   Package,
   RefreshCcw,
@@ -27,6 +27,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import LoadingScreen from "../../loading1"
 
 interface ReturnStatusUpdate {
   status: string
@@ -116,44 +117,17 @@ export default function ReturnDetailPage({ returnId }: ReturnDetailPageProps) {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-0 m-0">
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <Skeleton className="h-[400px] w-full rounded-lg" />
-          </div>
-          <div>
-            <Skeleton className="h-[400px] w-full rounded-lg" />
-          </div>
-        </div>
-      </div>
-    )
+  
+    if(isLoading)
+     return <LoadingScreen />
+  if(error)
+     return <ErrorPage/>
+    console.log('data',data)
+   const statuses = data?JSON.parse(data.return_status_updates).map((st)=>st.status):[]
+  const canCancelReturn = () => {
+    const status = data.return_status?.toUpperCase()
+    return status === "RETURN REQUESTED"  
   }
-
-  if (isError) {
-    return (
-      <div className="container mx-auto px-1">
-       
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-10">
-              <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-              <h3 className="text-lg font-medium">Error Loading Details</h3>
-              <p className="text-sm text-gray-500 mt-2">
-                {error instanceof Error ? error.message : "Failed to load details"}
-              </p>
-              <Button onClick={() => refetch()} className="mt-4">
-                Try Again
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
   if (!data) {
     return (
       <div className="container mx-auto ">
@@ -192,22 +166,22 @@ const statusUpdates=data?JSON.parse(data.return_status_updates):[]
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <CardTitle className="text-lg">
-                      {isExchange ? "Exchange" : "Return"} #{data.uuid || data.id}
+                       #{data.uuid || data.id}
                     </CardTitle>
                    
                   </div>
                   <CardDescription>Requested on {formatDate(data.created_at)}</CardDescription>
                 </div>
                 <div className="flex flex-col items-end">
-                  <Badge className={getStatusColor(data.return_status)} >
-                    {data.return_status.includes('Cancelled')?'Cancelled':data.return_status.replace('Return','')}</Badge>
+                  <Badge className="bg-primary-700 text-white text-center" >
+                    {data.return_status.includes('Cancelled')?'Cancelled':capitalize(data.return_status.replace('Return',''))}</Badge>
                 </div>
               </div>
             </CardHeader>
 
             <CardContent>
-              <div className="mb-6">
-                <h3 className="text-lg font-medium mb-3">{isExchange ? "Exchange" : "Return"} Details</h3>
+              <div className="mb-2">
+               
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <p className="text-sm text-gray-500">Reason</p>
@@ -426,7 +400,7 @@ const statusUpdates=data?JSON.parse(data.return_status_updates):[]
             </CardContent>
 
             <CardFooter>
-              {data.return_status === "Return Requested" && (
+              {canCancelReturn() && (
                 <Button variant="destructive" onClick={handleCancelReturn} disabled={isCancelling}>
                   {isCancelling ? "Cancelling..." : `Cancel ${isExchange ? "Exchange" : "Return"} Request`}
                 </Button>
@@ -436,57 +410,14 @@ const statusUpdates=data?JSON.parse(data.return_status_updates):[]
         </div>
 
         <div>
-          {statusUpdates.length>0 && 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Status Updates</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {statusUpdates.map((update, index) => (
-                  <div key={index} className="relative pl-8">
-                   
-                    <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center">
-                      {getStatusIcon(update.icon)}
-                    </div>
-                    <div>
-                      <h4 className="font-medium">{update.status}</h4>
-                      <time className="text-sm text-gray-500">{formatDate(update.date)}</time>
-                      {update.notes && <p className="mt-1 text-sm text-gray-600">{update.notes}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-}
+           
+          
+              <OrderTimeline item_status={statuses} type="return" orientation="vertical"/>
+                        
+          
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Order Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
-                  <div>
-                    <p className="font-medium">Order  Date</p>
-                    <p className="text-sm text-gray-500">{formatDate(data.created_at)}</p>
-                  </div>
-                </div>
 
-                {!isExchange && (
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="h-5 w-5 text-gray-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Refundable Amount</p>
-                      <p className="text-sm text-gray-500">{formatCurrency(Number.parseFloat(data.refund_amount))}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          
         </div>
       </div>
     </div>

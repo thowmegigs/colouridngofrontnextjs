@@ -1,4 +1,12 @@
+import { fetchSetting } from "@/lib/api"
+import { useQuery } from "@tanstack/react-query"
+
 export default function ReturnPolicy() {
+   const { data: setting } = useQuery<any>({
+    queryKey: ["setting"],
+    queryFn: () => fetchSetting(),
+  
+  })
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="p-4 border-b bg-muted/30">
@@ -7,7 +15,7 @@ export default function ReturnPolicy() {
       <div className="p-6">
         <div className="prose prose-sm max-w-none">
           <p>
-            Most items purchased from MultiVendor Marketplace can be returned within 2 days of delivery. However,
+            Most items purchased from MultiVendor Marketplace can be returned within ${setting?.return_days??3} days of delivery. However,
             certain products have different return policies:
           </p>
 
@@ -17,7 +25,7 @@ export default function ReturnPolicy() {
             <div className="border rounded-lg p-4">
               <h4 className="font-medium mb-2">Electronics</h4>
               <ul className="list-disc pl-5 space-y-1">
-                <li>Must be returned within 15 days of delivery</li>
+                <li>Must be returned within ${setting?.return_days??3} days of delivery</li>
                 <li>Must be in original packaging with all accessories</li>
                 <li>Must not show signs of use or damage</li>
                 <li>Software, games, and digital products cannot be returned once opened or used</li>

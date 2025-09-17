@@ -1,4 +1,3 @@
-import React from 'react';
 
 const TermsOfUse = () => {
   return (
@@ -91,7 +90,7 @@ const TermsOfUse = () => {
             <span className="font-medium">Grievance Officer:</span> Adv. Vijay Kumar
           </p>
           <p className="mb-2">
-            <span className="font-medium">Customer Support:</span> 080-61561999
+            <span className="font-medium">Customer Support:</span>+919991110716
           </p>
           <a 
             href="https://www.colourindigo.com/contactus" 
@@ -102,7 +101,7 @@ const TermsOfUse = () => {
         </section>
 
         <p className="text-sm text-gray-500 mt-8 italic">
-          Last updated: May 30, 2025
+          Last updated: July 20, 2025
         </p>
       </div>
     </div>

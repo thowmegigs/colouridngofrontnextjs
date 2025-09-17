@@ -11,7 +11,7 @@ import { useState } from "react"
 export default function CustomerMobileNav() {
   const pathname = usePathname()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-const isMobile=useMobile()
+  const isMobile=useMobile()
   const menuItems = [
     {
       title: "Dashboard",
@@ -35,12 +35,13 @@ const isMobile=useMobile()
       path: "/customer/profile",
       icon: <User size={20} />,
     },
+   
   ]
  if(!isMobile) return null
   const isActive = (path: string) => {
     return pathname === path
   }
-
+if(pathname.includes('order-item-detail')) return null
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t">
@@ -73,7 +74,7 @@ const isMobile=useMobile()
               <h2 className="font-semibold text-lg">My Account</h2>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <nav className="p-4">
+              <nav className="p-4">sdb
                 <ul className="space-y-2">
                   {menuItems.map((item) => (
                     <li key={item.title}>

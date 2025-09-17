@@ -14,7 +14,7 @@ interface Props {
   value: string;
   title: string;
   options: FilterOption[];
-selectedFilterParams:any,
+  selectedFilterParams: any;
   onChange: (selected: any) => void;
   showSearch?: boolean;
 }
@@ -27,48 +27,55 @@ const FilterAccordionItem: React.FC<Props> = ({
   selectedFilterParams,
   showSearch = true,
 }) => {
-
   const [search, setSearch] = useState("");
   const [acvalue, setAcValue] = useState(value);
   const [selected, setSelected] = useState<any>([]);
   const [selectedIds, setSelectedIds] = useState<any[]>([]);
-  useEffect(()=>{
-    const ids=selectedFilterParams?selectedFilterParams.map((v)=>(v.id)):[]
-    setSelectedIds([...ids])
-  },[selectedFilterParams])
-  const filteredOptions = useMemo(() => {
-    return search.length > 0 ? options.filter((opt) => {
-      let name: any = opt.name;
-      return typeof name === 'string' ? name.toLowerCase().includes(search.toLowerCase())
-        : name == search
-    }
-    ) : options;
-  }, [search, options]);
-  const handleChange = useCallback((checked: boolean, item: any) => {
- 
-    if (checked) {
-      selected.push(item)
-      setSelected([...selected])
+  const [showAll, setShowAll] = useState(false); // NEW STATE
 
-      setSelectedIds([...selectedIds, item.id])
-       onChange([...selected])
-    }
-    else {
-      const filteredArray = selected.filter((obj: any) => obj.id !== item.id);
-      setSelected([...filteredArray])
-       onChange([...filteredArray])
-      const filteredArray1 = selectedIds.filter((i: any) => i !== item.id);
-      setSelectedIds([...filteredArray1])
-    }
-   
-  },[selected,selectedIds])
-console.log('slected ids ',selectedIds)
+  useEffect(() => {
+    const ids = selectedFilterParams ? selectedFilterParams.map((v: any) => v.id) : [];
+    setSelectedIds([...ids]);
+  }, [selectedFilterParams]);
+
+  const filteredOptions = useMemo(() => {
+    return search.length > 0
+      ? options.filter((opt) => {
+          let name: any = opt.name;
+          return typeof name === "string"
+            ? name.toLowerCase().includes(search.toLowerCase())
+            : name == search;
+        })
+      : options;
+  }, [search, options]);
+
+  const handleChange = useCallback(
+    (checked: boolean, item: any) => {
+      if (checked) {
+        const updated = [...selected, item];
+        setSelected(updated);
+        setSelectedIds([...selectedIds, item.id]);
+        onChange(updated);
+      } else {
+        const filteredArray = selected.filter((obj: any) => obj.id !== item.id);
+        setSelected(filteredArray);
+        const filteredArray1 = selectedIds.filter((i: any) => i !== item.id);
+        setSelectedIds(filteredArray1);
+        onChange(filteredArray);
+      }
+    },
+    [selected, selectedIds, onChange]
+  );
+
+  // Determine how many options to display
+  const visibleOptions = showAll ? filteredOptions : filteredOptions.slice(0, 5);
+
   return (
     <Accordion
       type="single"
       collapsible
       value={acvalue}
-      onValueChange={(val: any) => setAcValue(val === acvalue ? '' : val)}
+      onValueChange={(val: any) => setAcValue(val === acvalue ? "" : val)}
     >
       <AccordionItem value={value}>
         <AccordionTrigger className="py-2 text-sm">{title}</AccordionTrigger>
@@ -77,7 +84,6 @@ console.log('slected ids ',selectedIds)
             {showSearch && (
               <input
                 type="text"
-               
                 placeholder={`Search ${title.toLowerCase()}...`}
                 className="w-full px-2 py-1 border border-gray-300 rounded-md text-xs"
                 value={search}
@@ -86,37 +92,59 @@ console.log('slected ids ',selectedIds)
                 onFocus={(e) => e.stopPropagation()}
               />
             )}
-            {filteredOptions && Array.isArray(filteredOptions) && 
-            filteredOptions.map((item, index) => {
-              
-              return <div key={index} className="flex items-center space-x-2">
+            {visibleOptions.map((item, index) => (
+              <div key={index} className="flex items-center space-x-2">
                 <Checkbox
                   id={item.id}
                   checked={selectedIds.includes(item.id)}
                   onCheckedChange={(checked: boolean) => handleChange(checked, item)}
                 />
-                {value !== 'ratings' ?(value!=='colors'?
-                  <Label htmlFor={item.id} className="font-normal text-xs cursor-pointer">
-                    {item.name}
-                  </Label>:
-                       <Label htmlFor={item.id} className="font-normal text-xs cursor-pointer flex items-center space-x-2 ">
-                      <div className={`w-4 h-4 bg-${item.name.toLowerCase()}-500 rounded-full`}></div>
-                            <span className="peer-checked:font-semibold">{item.name}</span>
-                          
-                     </Label>
-                    )
-                  : <Label htmlFor={`rating-${item.id}`} className="font-normal text-xs cursor-pointer flex items-center">
+                {value !== "ratings" ? (
+                  value !== "colors" ? (
+                    <Label htmlFor={item.id} className="font-normal text-xs cursor-pointer">
+                      {item.name}
+                    </Label>
+                  ) : (
+                    <Label
+                      htmlFor={item.id}
+                      className="font-normal text-xs cursor-pointer flex items-center space-x-2"
+                    >
+                      <div
+                        className={`w-4 h-4 bg-${item.name.toLowerCase()}-500 rounded-full`}
+                      ></div>
+                      <span className="peer-checked:font-semibold">{item.name}</span>
+                    </Label>
+                  )
+                ) : (
+                  <Label
+                    htmlFor={`rating-${item.id}`}
+                    className="font-normal text-xs cursor-pointer flex items-center"
+                  >
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`h-4 w-4 ${i < Number(item.id) ? "text-amber-500 fill-current" : "text-muted-foreground"}`}
+                        className={`h-4 w-4 ${
+                          i < Number(item.id) ? "text-amber-500 fill-current" : "text-muted-foreground"
+                        }`}
                       />
                     ))}
                     <span className="ml-1">& Up</span>
                   </Label>
-                }
+                )}
               </div>
-})}
+            ))}
+
+            {filteredOptions.length > 5 && (
+              <button
+                className="text-blue-600 text-xs mt-2 underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAll(!showAll);
+                }}
+              >
+                {showAll ? "View Less" : "View More"}
+              </button>
+            )}
           </div>
         </AccordionContent>
       </AccordionItem>

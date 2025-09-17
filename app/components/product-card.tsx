@@ -89,7 +89,7 @@ export default function ProductCard({
         sale_price,
         image,
         vendorId,
-        variantId,
+       
 
       })
 
@@ -115,12 +115,26 @@ export default function ProductCard({
           <SafeImage
             src={image}
             alt={name}
-            width={600} // use the maximum expected image width for desktop
-            height={600} // maintain aspect ratio
+            width={600}
+            height={600}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
+
+          {/* Overlay hover effect */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+
+          {/* Rating Box */}
+          {rating && (
+            <div className="absolute bottom-2 left-2 bg-white/90 text-xs text-black px-2 py-1 rounded shadow-sm flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
+                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                <span className="font-semibold">{rating.toFixed(1)}</span>
+              </div>
+              <div className="w-px h-4 bg-gray-300" />
+              <span className="text-gray-600">{12}</span>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -134,7 +148,7 @@ export default function ProductCard({
 
     </div>
 
-    {renderRating()}
+    {/* {renderRating()} */}
 
     <div className="py-3 px-2">
 

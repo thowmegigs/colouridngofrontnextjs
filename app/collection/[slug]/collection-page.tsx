@@ -120,7 +120,7 @@ export default function CollectionPage({ slug }: CategoryPageProps) {
     const params = new URLSearchParams()
     params.append("sort_by", sortBy)
     //  params.append("page", page.toString())
-    params.append("limit", "20")
+    params.append("limit", "40")
 
     if (priceRange[0] !== null) params.append("minPrice", priceRange[0].toString())
     if (priceRange[1] !== null) params.append("maxPrice", priceRange[1].toString())

@@ -7,6 +7,20 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle
+} from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -21,47 +35,88 @@ import {
   saveAddress,
   type Address,
   type OrderRequest,
-  type PaymentMethod,
-  type PincodeAvailabilityResponse
+  type PaymentMethod
 } from "@/lib/api"
 import { capitalizeWords } from "@/lib/utils"
 import {
+  AlertCircle,
   Check,
   ChevronRight,
   CreditCard,
-  CreditCardIcon,
   Edit2,
   Home,
   Loader2,
   Plus,
+  Search,
   Shield,
-  ShoppingBag,
   Ticket,
-  Truck,
   X
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useMobile } from "../../hooks/use-mobile"
 
+import { useToast } from "@/components/ui/use-toast"
 import { api_url, image_base_url } from "@/contant"
+import { fetchAvailableCoupons, type Coupon } from "@/lib/api"
 import axios from "axios"
-import RazorpayPayment from "../components/razorpay-payment"
 import SafeImage from "../components/SafeImage"
 import { showToast } from "../components/show-toast"
 import { formatCurrency } from "../lib/utils"
 import { useAuth } from "../providers/auth-provider"
 import { useCart } from "../providers/cart-provider"
 
+// Define the props for the RazorpayPayment component
+interface RazorpayPaymentProps {
+  orderId: string
+  razorpayOrderId: string
+  amount: number
+  currency?: string
+  name: string
+  description?: string
+  
+  customerEmail?: string
+  customerPhone?: string
+  onSuccess: (resp:any) => void
+  onFailure: (error: any) => void
+}
+
+// Define the Razorpay options type
+interface RazorpayOptions {
+  key: string
+  amount: number
+  currency: string
+  name: string
+  description: string
+  order_id: string
+  handler: (response: any) => void
+  prefill: {
+    name: string
+    email?: string
+    contact?: string
+  }
+  notes?: Record<string, string>
+  theme?: {
+    color: string
+  }
+  modal?: {
+    ondismiss: () => void
+  }
+}
+
+// Declare the Razorpay global type
+declare global {
+  interface Window {
+    Razorpay: any
+  }
+}
 
 export default function CheckoutPage() {
   const { items, subtotal, discount, total,  clearCart,shipping_cost, appliedCoupon, applyCoupon, removeCoupon } = useCart()
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("razorpay")
   const [pincode, setPincode] = useState("")
-  const [pincodeAvailability, setPincodeAvailability] = useState<PincodeAvailabilityResponse | null>(null)
-  const [checkingPincode, setCheckingPincode] = useState(false)
-  const [activeStep, setActiveStep] = useState<"address" | "delivery" | "payment">("address")
+
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null)
   const [selectedBillingAddress, setSelectedBillingAddress] = useState<string | null>(null)
   const [useSameAddress, setUseSameAddress] = useState(true)
@@ -77,8 +132,13 @@ export default function CheckoutPage() {
   const [checkoutItems,setCheckoutItems]=useState([])
   const [selectedState, setSelectedState] = useState("")
   const [cities, setCities] = useState<any>([])
-  const {user}=useAuth()
   
+  
+
+    const [couponMessage, setCouponMessage] = useState<{ type: "success" | "error"; message: string } | null>(null)
+
+  const {isAuthenticated,user}=useAuth()
+  console.log('disc',discount)
   const [newAddress, setNewAddress] = useState<Partial<Address>>({
     name: "",
     phone_number: "", 
@@ -100,10 +160,17 @@ export default function CheckoutPage() {
   // Coupon state
   const [couponCode, setCouponCode] = useState("")
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
-  const [couponError, setCouponError] = useState<string | null>(null)
 
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isOpenCoupon, setIsOpenCoupon] = useState(false)
+const [isLoading, setIsLoading] = useState(true)
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false)
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
   const isMobile = useMobile()
   const router = useRouter()
+  const { toast } = useToast()
 
   // Check if user is logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -120,12 +187,6 @@ export default function CheckoutPage() {
     const isUserLoggedIn = !!userToken || loggedInFlag === "true"
     setIsLoggedIn(isUserLoggedIn)
 
-    // if (!isUserLoggedIn) {
-    //   router.push("/checkout/auth")
-    //   return
-    // }
-
-    // Get user data
     const userName = localStorage.getItem("userName") || ""
     const userEmail = localStorage.getItem("userEmail") || ""
     const userPhone = localStorage.getItem("userPhone") || ""
@@ -151,11 +212,36 @@ export default function CheckoutPage() {
     loadAddresses()
   }, [router, appliedCoupon, applyCoupon])
 
+  // Fetch available coupons when the dialog/drawer is opened
+  useEffect(() => {
+    if (isOpenCoupon) {
+      const loadCoupons = async () => {
+    
+        setIsLoadingCoupons(true)
+        try {
+          const coupons = await fetchAvailableCoupons()
+          setAvailableCoupons(coupons)
+        } catch (error) {
+          console.error("Error fetching coupons:", error)
+          showToast({
+            title: "Error", description: "Failed to load available coupons",
+            variant: 'destructive'
+          })
+        } finally {
+          setIsLoadingCoupons(false)
+        }
+      }
+
+      loadCoupons()
+    }
+  }, [isOpenCoupon])
+
+  
   useEffect(() => {
     const getCitis = async () => {
       const resp = await fetchCities(selectedState as any)
    
-      setCities(resp)
+      setCities(resp.data.rows)
     }
     if (selectedState) {
       getCitis()
@@ -167,6 +253,122 @@ useEffect(()=>{
     setCheckoutItems(mod)
   }
 },[items])
+ // Fetch available coupons when the dialog/drawer is opened
+  useEffect(() => {
+    if (isOpenCoupon) {
+      const loadCoupons = async () => {
+        setIsLoadingCoupons(true)
+        try {
+          const coupons:any = await fetchAvailableCoupons()
+          console.log('coiupons', coupons)
+          setAvailableCoupons(coupons.data)
+        } catch (error) {
+          console.error("Error fetching coupons:", error)
+          showToast({
+            title: "Error", description: "Failed to load available coupons",
+            variant: 'destructive'
+          })
+        } finally {
+          setIsLoadingCoupons(false)
+        }
+      }
+
+      loadCoupons()
+    }
+  }, [isOpenCoupon, showToast])
+ useEffect(() => {
+    const loadRazorpayScript = () => {
+      const script = document.createElement("script")
+      script.src = "https://checkout.razorpay.com/v1/checkout.js"
+      script.async = true
+      script.onload = () => {
+        setIsScriptLoaded(true)
+        setIsLoading(false)
+      }
+      script.onerror = () => {
+        setIsLoading(false)
+        toast({
+          title: "Payment Gateway Error",
+          description: "Failed to load payment gateway. Please try again later.",
+          variant: "destructive",
+        })
+      }
+      document.body.appendChild(script)
+    }
+
+    loadRazorpayScript()
+
+    return () => {
+      // Cleanup if needed
+    }
+  }, [])
+  // Filter coupons based on search query
+  const filteredCoupons = useMemo(() => {
+   
+    if (!searchQuery.trim()) return availableCoupons
+
+    const query = searchQuery.toLowerCase().trim()
+    return availableCoupons.filter(
+      (coupon) =>
+        coupon.code.toLowerCase().includes(query) ||
+        coupon.description?.toLowerCase().includes(query) ||
+        (coupon.discount_type === "Percent" && `${coupon.discount}%`.includes(query)) ||
+        (coupon.discount_type === "Flat" && `$${coupon.discount}`.includes(query)),
+    )
+  }, [availableCoupons, searchQuery])
+
+  const handleApplyCouponWithAuth = async (code: string) => {
+    if (!isAuthenticated) {
+      // Save the coupon code and open auth modal
+      router.push(`auth/login?redirect=/cart`)
+    }
+
+    // User is logged in, proceed with applying coupon
+    await processCouponApplication(code)
+  }
+
+  const processCouponApplication = async (code: string) => {
+    if (!code) {
+      setCouponMessage({
+        type: "error",
+        message: "Please enter a coupon code",
+      })
+      return
+    }
+    try {
+      const result = await applyCoupon(code)
+      
+      setCouponMessage({
+        type: "success",
+        message: result.message,
+      })
+      setCouponCode("")
+      setIsOpenCoupon(false)
+
+      showToast({
+        title: "Coupon Applied", description: result.message as any
+      })
+      setIsApplyingCoupon(false)
+    }
+
+    catch (err) {
+       setIsApplyingCoupon(false)
+      setIsOpenCoupon(false)
+      console.log('lo err', err.message)
+      setCouponMessage({
+        type: "error",
+        message: err.message,
+      })
+
+    }
+
+    // Clear message after 5 seconds
+    setTimeout(() => {
+      setCouponMessage(null)
+    }, 5000)
+  }
+
+  
 
  const handlePaymentMethodSelect= useCallback(
     (method) => () => {
@@ -184,8 +386,8 @@ useEffect(()=>{
 
       setAddresses(userAddresses.data.addresses)
       const states: any = await fetchStates()
-
-      setStates(states)
+console.log('states',states)
+      setStates(states.data.rows)
 
       // Set default addresses if available
       const defaultShipping = userAddresses.data.addresses.find(
@@ -218,7 +420,68 @@ useEffect(()=>{
       setIsLoadingAddresses(false)
     }
   }
+const handlePayment = (orderCreateResponse:any) => {
+    if (!isScriptLoaded) {
+      toast({
+        title: "Payment Gateway Error",
+        description: "Payment gateway is not loaded yet. Please try again.",
+        variant: "destructive",
+      })
+      return
+    }
 
+    setIsPaymentProcessing(true)
+
+    try {
+    
+    const amount=orderCreateResponse.razorpay_order.amount / 100
+   
+    const rzOrderId= orderCreateResponse.razorpay_order.id
+    const orderId= orderCreateResponse.order_id
+      const options: RazorpayOptions = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount, // Razorpay expects amount in smallest currency unit (paise for INR)
+        currency:'INR',
+        name:userData.name,
+        description:'Order Payment',
+        order_id:rzOrderId,
+        handler: (response) => {
+          setIsPaymentProcessing(false)
+       
+          handlePaymentSuccess({amount:amount/100,orderId,razorpay_payment_id:response.razorpay_payment_id, razorpay_order_id:response.razorpay_order_id, razorpay_signature:response.razorpay_signature})
+        },
+        prefill: {
+          name:userData.name,
+          email: userData.email,
+          contact: userData.phone,
+        },
+        theme: {
+          color: "#ec2c13ff",
+        },
+        modal: {
+          ondismiss: () => {
+            setIsPaymentProcessing(false)
+            toast({
+              title: "Payment Cancelled",
+              description: "You cancelled the payment process.",
+              variant: "destructive",
+            })
+          },
+        },
+      }
+
+      const razorpay = new window.Razorpay(options)
+      razorpay.open()
+    } catch (error) {
+      setIsPaymentProcessing(false)
+      handlePaymentFailure(error)
+      toast({
+        title: "Payment Error",
+        description: "There was an error initiating the payment. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
   if (items.length === 0) {
     return (
       <div className="container py-12">
@@ -236,37 +499,6 @@ useEffect(()=>{
   }
 
 
-
-  const handleContinueToDelivery = () => {
-    if (!selectedAddress) {
-      showToast({  description: "Please select or add a shipping address to continue." ,variant:"destructive"})
-      return
-    }
-
-    if (useSameAddress) {
-      setSelectedBillingAddress(selectedAddress)
-    } else if (!selectedBillingAddress) {
-      showToast({
-        title: "Billing Address Required", description: "Please select or add a billing address to continue."
-      ,variant:"destructive"})
-      return
-    }
-
-    setActiveStep("delivery")
-    // Scroll to top on mobile
-    if (isMobile) {
-      window.scrollTo({ top: 0, behavior: "smooth" })
-    }
-  }
-
-  const handleContinueToPayment = () => {
-    setActiveStep("payment")
-    // Scroll to top on mobile
-    if (isMobile) {
-      window.scrollTo({ top: 0, behavior: "smooth" })
-    }
-  }
-
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, field: keyof Address) => {
     setNewAddress({
       ...newAddress,
@@ -275,6 +507,7 @@ useEffect(()=>{
   }
 
   const handleSaveAddress = async () => {
+    console.log('new ad',newAddress)
     if (
       !newAddress.name ||
       !newAddress.phone_number ||
@@ -360,10 +593,10 @@ useEffect(()=>{
   
     const res = await fetchCities(address.state_id as any)
    
-    setCities(res)
+    setCities(res.data.rows)
     setEditingAddress(address)
     setNewAddress({
-      ...address,
+      ...address,phone_number:user?.phone
     })
     setAddingNewAddress(true)
   }
@@ -392,27 +625,20 @@ useEffect(()=>{
   // Handle coupon application
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
-      setCouponError("Please enter a coupon code")
+        setCouponMessage({
+        type: "error",
+        message: "Please enter a coupon code",
+      })
+      
       return
     }
-
-    setIsApplyingCoupon(true)
-    setCouponError(null)
-
-    try {
-      const result = await applyCoupon(couponCode)
-
-        setCouponCode("")
-        showToast({
-          title: "Success", description: "Coupon applied successfully!"
-        })
-     
-    } catch (error) {
-     
-      setCouponError(error['message'])
-    } finally {
-      setIsApplyingCoupon(false)
+  if (!isAuthenticated) {
+      // Save the coupon code and open auth modal
+      router.push(`auth/login?redirect=/cart`)
     }
+
+    // User is logged in, proceed with applying coupon
+    await processCouponApplication(couponCode)
   }
 
   // Handle coupon removal
@@ -422,6 +648,133 @@ useEffect(()=>{
       title: "Coupon Removed", description: "Coupon has been removed from your order."
     })
   }
+ const CouponsContent = () => (
+    <div className="space-y-4">
+      {isLoadingCoupons ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading available coupons...</span>
+        </div>
+      ) : (
+        <>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search coupons..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear search</span>
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+            {filteredCoupons && filteredCoupons.length > 0 ? (
+              filteredCoupons.map((coupon) => (
+                <div key={coupon.code} className="border rounded-lg p-4 hover:border-primary transition-colors">
+                  <div className="flex flex-col space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium text-primary">{coupon.code}</div>
+                        <div className="text-sm text-muted-foreground">{coupon.description}</div>
+                      </div>
+                      <div className="text-lg font-bold text-primary">
+                        {coupon.discount_type === "Percent"
+                          ? `${coupon.discount}%`
+                          : `$${coupon.discount.toFixed(2)}`}
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                      <span>Min. order: ${coupon.cart_amount.toFixed(2)}</span>
+                      <span>Expires: {new Date(coupon.end_date).toLocaleDateString()}</span>
+                      {coupon.max_discount && (
+                        <span>Max discount: ${coupon.max_discount.toFixed(2)}</span>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(coupon.code)
+                          showToast({
+                            title: "Copied!",
+                            description: `Coupon code ${coupon.code} copied to clipboard`,
+
+                          })
+                        }}
+                        className="w-full sm:w-auto"
+                      >
+                        Copy
+                      </Button>
+                      <Button onClick={() => handleApplyCouponWithAuth(coupon.code)} className="w-full sm:w-auto">
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6">
+                <Search className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                <p className="font-medium">No matching coupons found</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Try a different search term or browse all available coupons.
+                </p>
+                {searchQuery && (
+                  <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
+                    Clear Search
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* <div className="flex items-center space-x-2 pt-3 border-t">
+            <Input
+              placeholder="Enter coupon code"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleApplyCouponWithAuth(couponCode)}
+            />
+            <Button onClick={() => handleApplyCouponWithAuth(couponCode)} disabled={isCouponLoading}>
+              {isCouponLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Applying...
+                </>
+              ) : (
+                "Apply"
+              )}
+            </Button>
+          </div> */}
+
+          {couponMessage && (
+            <div
+              className={`text-sm flex items-center ${couponMessage.type === "success" ? "text-green-600" : "text-destructive"
+                }`}
+            >
+              {couponMessage.type === "success" ? (
+                <Check className="h-4 w-4 mr-1" />
+              ) : (
+                <AlertCircle className="h-4 w-4 mr-1" />
+              )}
+              {couponMessage.message}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
 
   const handlePlaceOrder = async () => {
     if (!selectedAddress || (!useSameAddress && !selectedBillingAddress)) {
@@ -436,7 +789,7 @@ useEffect(()=>{
     setIsProcessingOrder(true)
 
     try {
-    console.log('dfdfd')
+   
       const orderItems = items.map((item) => ({
         product_id: item.id,
         variant_id: item.variantId as any,
@@ -444,7 +797,7 @@ useEffect(()=>{
         price: item.price,
         sale_price: item.sale_price ?? 0.0,
         quantity: item.quantity,
-        image: item.image,
+        image: item.image, 
         vendor_id:item.vendorId,
         size:item.size,color:item.color
       }))
@@ -477,13 +830,8 @@ useEffect(()=>{
      
       if (response.success) {
         if (paymentMethod === "razorpay" && response.payment_required && response.razorpay_order) {
-          // Set order response for Razorpay payment
-          setOrderResponse({
-            orderId: response.order_id,
-            razorpayOrderId: response.razorpay_order.id,
-            amount: response.razorpay_order.amount / 100, // Convert from paise to rupees
-            requiresPayment: true,
-          })
+          handlePayment(response)
+        
         } else {
      
           showToast({
@@ -569,64 +917,10 @@ useEffect(()=>{
         {/* Mobile Header */}
        
 
-        {/* Progress Indicator */}
-        <div className="container mt-4">
-          <div className="flex items-center justify-between mb-6">
-            <button className="flex flex-col items-center focus:outline-none" onClick={() => setActiveStep("address")}>
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${activeStep === "address" || activeStep === "delivery" || activeStep === "payment"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-                  }`}
-              >
-                <Home className="h-4 w-4" />
-              </div>
-              <span className="text-xs mt-1">Address</span>
-            </button>
-            <div className="h-0.5 flex-1 bg-muted mx-2">
-              <div
-                className={`h-full bg-primary transition-all ${activeStep === "delivery" || activeStep === "payment" ? "w-full" : "w-0"
-                  }`}
-              ></div>
-            </div>
-            <button
-              className="flex flex-col items-center focus:outline-none"
-              onClick={() => (activeStep !== "address" ? setActiveStep("delivery") : null)}
-              disabled={activeStep === "address"}
-            >
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${activeStep === "delivery" || activeStep === "payment"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-                  }`}
-              >
-                <Truck className="h-4 w-4" />
-              </div>
-              <span className="text-xs mt-1">Delivery</span>
-            </button>
-            <div className="h-0.5 flex-1 bg-muted mx-2">
-              <div className={`h-full bg-primary transition-all ${activeStep === "payment" ? "w-full" : "w-0"}`}></div>
-            </div>
-            <button
-              className="flex flex-col items-center focus:outline-none"
-              onClick={() => (activeStep === "payment" ? setActiveStep("payment") : null)}
-              disabled={activeStep !== "payment"}
-            >
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${activeStep === "payment" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  }`}
-              >
-                <CreditCard className="h-4 w-4" />
-              </div>
-              <span className="text-xs mt-1">Payment</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Content based on active step */}
-        <div className="container pb-24 overflow-y-auto">
-          {/* Address Step */}
-          {activeStep === "address" && (
+        {/* Content - Single page layout */}
+        <div className="container pb-24 overflow-y-auto space-y-6">
+          {/* Address Section */}
+          <div className="space-y-4">
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Shipping Address</h2>
 
@@ -836,7 +1130,7 @@ useEffect(()=>{
                       id="phone"
                       type="tel"
                       placeholder="Enter phone number "
-                      value={user?.phone}
+                      value={newAddress?.phone_number}
                       onChange={(e) => handleAddressChange(e, "phone_number")}
                     />
                   </div>
@@ -957,260 +1251,108 @@ useEffect(()=>{
 
               
             </div>
-          )}
+          </div>
 
-          {/* Delivery Step */}
-          {/* {activeStep === "delivery" && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Delivery Options</h2>
+          {/* Payment Method Section */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Payment Method</h2>
+             <div className="flex items-center mt-4 p-4 rounded-lg bg-muted/30">
+              <Shield className="h-5 w-5 text-muted-foreground mr-3" />
+              <p className="text-sm text-muted-foreground">
+                Your payment information is processed securely. We do not store credit card details.
+              </p>
+            </div>
 
-              <RadioGroup value={deliveryOption} onValueChange={setDeliveryOption} className="space-y-3">
+              <RadioGroup
+                value={paymentMethod}
+                onValueChange={(value) => handlePaymentMethodSelect(value as PaymentMethod)}
+                className="space-y-3"
+              >
                 <div
-                  className={`border rounded-lg p-4 ${deliveryOption === "Standard" ? "border-primary bg-primary/7" : ""
+                  className={`border rounded-lg p-4 ${paymentMethod === "razorpay" ? "border-primary bg-primary/7" : ""
                     }`}
-                  onClick={() => setDeliveryOption("Standard")}
+                  onClick={()=>setPaymentMethod("razorpay")}
                 >
                   <div className="flex items-start">
-                    <RadioGroupItem value="Standard" id="Standard-delivery" className="mt-1" />
+                    <RadioGroupItem value="razorpay" id="payment-razorpay" className="mt-1" />
                     <div className="ml-3 flex-1">
                       <div className="flex justify-between">
-                        <div>
-                          <Label htmlFor="standard-delivery" className="font-medium">
-                            Standard Delivery
-                          </Label>
-                          <p className="text-sm text-muted-foreground">Delivery in 3-5 business days</p>
+                        <div className="flex items-center">
+                          <CreditCard className="h-5 w-5 mr-2" />
+                          <span className="font-medium">Credit / Debit Card</span>
                         </div>
-                        <span className="font-medium">Free</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">Pay securely with Razorpay</p>
+                      <div className="flex items-center mt-2 space-x-2">
+                        <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
+                          VISA
+                        </div>
+                        <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
+                          MC
+                        </div>
+                        <div className=" bg-muted rounded flex items-center justify-center text-xs font-medium">
+                          NET BANKING
+                        </div>
+                        <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
+                          UPI
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div
-                  className={`border rounded-lg p-4 ${deliveryOption === "Express" ? "border-primary bg-primary/7" : ""
-                    }`}
-                  onClick={() => setDeliveryOption("Express")}
+                  className={`border rounded-lg p-4 ${paymentMethod === "cod" ? "border-primary bg-primary/7" : ""}`}
+                  onClick={()=>setPaymentMethod("cod")}
                 >
                   <div className="flex items-start">
-                    <RadioGroupItem value="Express" id="express-delivery" className="mt-1" />
+                    <RadioGroupItem value="cod" id="payment-cod" className="mt-1" />
                     <div className="ml-3 flex-1">
                       <div className="flex justify-between">
-                        <div>
-                          <Label htmlFor="express-delivery" className="font-medium">
-                            Express Delivery
-                          </Label>
-                          <p className="text-sm text-muted-foreground">Delivery in 1-2 business days</p>
+                        <div className="flex items-center">
+                         
+                          <span className="font-medium">Cash on Delivery</span>
                         </div>
-                        <span className="font-medium">{formatCurrency(9.99)}</span>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className={`border rounded-lg p-4 ${deliveryOption === "Same-day" ? "border-primary bg-primary/7" : ""
-                    }`}
-                  onClick={() => setDeliveryOption("Same-day")}
-                >
-                  <div className="flex items-start">
-                    <RadioGroupItem value="same-day" id="same-day-delivery" className="mt-1" />
-                    <div className="ml-3 flex-1">
-                      <div className="flex justify-between">
-                        <div>
-                          <Label htmlFor="same-day-delivery" className="font-medium">
-                            Same Day Delivery
-                          </Label>
-                          <p className="text-sm text-muted-foreground">Order before 2 PM for delivery today</p>
-                          <Badge variant="outline" className="mt-2">
-                            Limited Availability
-                          </Badge>
-                        </div>
-                        <span className="font-medium">{formatCurrency(19.99)}</span>
-                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">Pay when you receive your order</p>
                     </div>
                   </div>
                 </div>
               </RadioGroup>
+         
 
-              <div className="space-y-2 mt-6">
-                <Label htmlFor="delivery-notes">Delivery Notes (Optional)</Label>
-                <Textarea
-                  id="delivery-notes"
-                  placeholder="Add any special instructions for delivery"
-                  className="resize-none"
-                  value={deliveryNotes}
-                  onChange={(e) => setDeliveryNotes(e.target.value)}
-                />
-              </div>
+            {/* Coupon Section */}
+            <div className="border rounded-lg p-4 mt-4">
+              <h3 className="font-medium mb-3 flex items-center">
+                <Ticket className="h-4 w-4 mr-2" />
+                {appliedCoupon ? "Applied Coupon" : "Apply Coupon"}
+              </h3>
 
-              <div className="border rounded-lg p-4 mt-4">
-                <h3 className="font-medium mb-2">Shipping to:</h3>
-                {addresses
-                  .filter((address) => address.id === selectedAddress)
-                  .map((address) => (
-                    <div key={address.id} className="text-sm">
-                      <p className="font-medium">{address.name}</p>
-                      <p>{address.address1}</p>
-                      <p>{address.address2}</p>
-                      <p>
-                        {address.city_id ? address.city_id : "City name"},
-                        {address.state_id ? address.state_id : "state name"}
-                        {address.pincode}
-                      </p>
-                      <p>{address.country}</p>
-                      <p className="text-muted-foreground mt-1">{address.phone_number}</p>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-primary"
-                        onClick={() => setActiveStep("address")}
-                      >
-                        Change
-                      </Button>
+              {appliedCoupon ? (
+                <div className="bg-green-50 border border-green-100 rounded-md p-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <Check className="h-5 w-5 text-green-500 mr-2" />
+                      <div>
+                        <p className="font-medium text-green-700">Coupon Applied: {appliedCoupon.code}</p>
+                        <p className="text-sm text-green-600">
+                          You saved {formatCurrency(discount)}
+                          {appliedCoupon.details?.discount_type === "Percent" && ` (${appliedCoupon.details?.discount}% off)`}
+                        </p>
+                      </div>
                     </div>
-                  ))}
-              </div>
-            </div>
-          )} */}
-
-          {/* Payment Step */}
-          {activeStep === "payment" && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Payment Method</h2>
-
-              {orderResponse && orderResponse.requiresPayment ? (
-                <div className="border rounded-lg p-6 space-y-4">
-                  <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
-                      <CreditCardIcon className="h-6 w-6" />
-                    </div>
-                    <h3 className="text-lg font-medium">Complete Your Payment</h3>
-                    <p className="text-muted-foreground mt-1">
-                      Your order has been created. Please complete the payment.
-                    </p>
-
-                    <div className="mt-4 p-4 bg-muted/30 rounded-lg">
-                      <p className="font-medium">Order Total: {formatCurrency(orderResponse.amount / 100)}</p>
-                      <p className="text-sm text-muted-foreground">Order ID: {orderResponse.orderId}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    {/* <RazorpayPayment
-                      orderId={orderResponse.orderId}
-                      razorpayOrderId={orderResponse.razorpayOrderId || ""}
-                      amount={orderResponse.amount}
-                      name={userData.name}
-                      // email={userData.email || ""}
-                      phone={userData.phone}
-                      onSuccess={handlePaymentSuccess}
-                      onFailure={handlePaymentFailure}
-                    /> */}
-                    <RazorpayPayment
-                      orderId={orderResponse.orderId}
-                      razorpayOrderId={orderResponse.razorpayOrderId || ""}
-                      amount={orderResponse.amount}
-                      name={user?.name || "Customer"}
-                       customerEmail={user?.email || ""}
-                      customerPhone={user?.phone}
-                      onSuccess={handlePaymentSuccess}
-                      onFailure={handlePaymentFailure}
-                    />
-
-                    <Button variant="outline" className="w-full mt-3" onClick={() => setOrderResponse(null)}>
-                      Cancel Payment
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-red-500 hover:text-red-700"
+                      onClick={handleRemoveCoupon}
+                    >
+                      Remove
                     </Button>
                   </div>
                 </div>
               ) : (
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={(value) => handlePaymentMethodSelect(value as PaymentMethod)}
-                  className="space-y-3"
-                >
-                  <div
-                    className={`border rounded-lg p-4 ${paymentMethod === "razorpay" ? "border-primary bg-primary/7" : ""
-                      }`}
-                    onClick={()=>setPaymentMethod("razorpay")}
-                  >
-                    <div className="flex items-start">
-                      <RadioGroupItem value="razorpay" id="payment-razorpay" className="mt-1" />
-                      <div className="ml-3 flex-1">
-                        <div className="flex justify-between">
-                          <div className="flex items-center">
-                            <CreditCard className="h-5 w-5 mr-2" />
-                            <span className="font-medium">Credit / Debit Card</span>
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">Pay securely with Razorpay</p>
-                        <div className="flex items-center mt-2 space-x-2">
-                          <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                            VISA
-                          </div>
-                          <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                            MC
-                          </div>
-                          <div className=" bg-muted rounded flex items-center justify-center text-xs font-medium">
-                            NET BANKING
-                          </div>
-                          <div className="h-6 w-10 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                            UPI
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`border rounded-lg p-4 ${paymentMethod === "cod" ? "border-primary bg-primary/7" : ""}`}
-                    onClick={()=>setPaymentMethod("cod")}
-                  >
-                    <div className="flex items-start">
-                      <RadioGroupItem value="cod" id="payment-cod" className="mt-1" />
-                      <div className="ml-3 flex-1">
-                        <div className="flex justify-between">
-                          <div className="flex items-center">
-                           
-                            <span className="font-medium">Cash on Delivery</span>
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">Pay when you receive your order</p>
-                      </div>
-                    </div>
-                  </div>
-                </RadioGroup>
-              )}
-
-              {/* Coupon Section */}
-              <div className="border rounded-lg p-4 mt-4">
-                <h3 className="font-medium mb-3 flex items-center">
-                  <Ticket className="h-4 w-4 mr-2" />
-                  {appliedCoupon ? "Applied Coupon" : "Apply Coupon"}
-                </h3>
-
-                {appliedCoupon ? (
-                  <div className="bg-green-50 border border-green-100 rounded-md p-3">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center">
-                        <Check className="h-5 w-5 text-green-500 mr-2" />
-                        <div>
-                          <p className="font-medium text-green-700">Coupon Applied: {appliedCoupon.code}</p>
-                          <p className="text-sm text-green-600">
-                            You saved {formatCurrency(discount)}
-                            {appliedCoupon.details?.discount_type === "Percent" && ` (${appliedCoupon.details?.discount}% off)`}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-red-500 hover:text-red-700"
-                        onClick={handleRemoveCoupon}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
+                <>
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <Input
@@ -1231,167 +1373,125 @@ useEffect(()=>{
                       )}
                     </Button>
                   </div>
-                )}
 
-                {couponError && (
-                  <div className="mt-2 text-sm text-red-500 flex items-center">
-                    <X className="h-4 w-4 mr-1" />
-                    {couponError}
-                  </div>
-                )}
-              </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-3" 
+                    onClick={() => setIsOpenCoupon(true)}
+                  >
+                    <Ticket className="h-4 w-4 mr-2" />
+                    View Available Coupons
+                  </Button>
+                </>
+              )}
+              {couponMessage && (
+                    <div
+                      className={`flex items-start gap-2 mt-2 rounded-lg border p-3 text-sm shadow-sm transition-all
+                        ${
+                          couponMessage.type === "success"
+                            ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300"
+                            : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
+                        }`}
+                    >
+                      {couponMessage.type === "success" ? (
+                        <Check className="h-5 w-5 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                      )}
 
-              <div className="border rounded-lg p-4 mt-4">
-                <h3 className="font-medium mb-3">Order Summary</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
-                  </div>
-
-                  {discount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Discount</span>
-                      <span>-{formatCurrency(discount)}</span>
+                      <div className="flex-1">
+                        <p className="font-medium">
+                          {couponMessage.type === "success" ? "Coupon Applied!" : "Coupon Error"}
+                        </p>
+                        <p className="text-sm">{couponMessage.message}</p>
+                      </div>
                     </div>
                   )}
 
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                   <span>
-                     {formatCurrency(shipping_cost)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between font-medium text-lg pt-2 border-t mt-2">
-                    <span>Total</span>
-                    <span>
-                      {formatCurrency(total+shipping_cost)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center mt-4 p-4 rounded-lg bg-muted/30">
-                <Shield className="h-5 w-5 text-muted-foreground mr-3" />
-                <p className="text-sm text-muted-foreground">
-                  Your payment information is processed securely. We do not store credit card details.
-                </p>
-              </div>
+              
             </div>
-          )}
 
-          {/* Order Summary Accordion */}
-          <Accordion type="single" collapsible defaultValue="summary" className="mt-6">
-            <AccordionItem value="summary" className="border rounded-lg overflow-hidden">
-              <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                <div className="flex items-center">
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                  <span>
-                    Order Summary ({items.length} {items.length === 1 ? "item" : "items"})
-                  </span>
+            <div className="border rounded-lg p-4 mt-4">
+              <h3 className="font-medium mb-3">Order Summary</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <ul className="space-y-4">
-                  {checkoutItems.map((item) => (
-                    <li key={item.id} className="flex flex-col">
-                      <div  className="flex">
-                      <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
-                        <SafeImage
-                          src={item.variantId && item.color
-                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/tiny_${item.image}`
-                          : `${image_base_url}/storage/products/${item.id}/thumbnail/tiny_${item.image}`
-                        }
-                          alt={item.name}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-fit"
-                        />
-                      </div>
 
-                      <div className="ml-4 flex-1">
-                        <h4 className="text-sm font-medium">{item.name}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {item.size && `Size: ${item.size}`}
-                          {item.size && item.color && " | "}
-                          {item.color && `Color: ${item.color}`}
-                        </p>
-                        <div className="flex justify-between mt-1">
-                          <span className="text-xs">Qty: {item.quantity}</span>
-                          <span className="text-sm font-medium">{formatCurrency(item.sale_price * item.quantity)}</span>
-                        </div>
-                      </div>
-                      </div>
-                   
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Show applied coupon in order summary */}
-                {appliedCoupon && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center text-green-600">
-                        <Ticket className="h-4 w-4 mr-1" />
-                        <span>Coupon: {appliedCoupon.code}</span>
-                      </div>
-                      <span className="text-green-600">-{formatCurrency(discount)}</span>
-                    </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span>
+                    <span>-{formatCurrency(discount)}</span>
                   </div>
                 )}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Shipping</span>
+                 <span>
+                   {formatCurrency(shipping_cost)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between font-medium text-lg pt-2 border-t mt-2">
+                  <span>Total</span>
+                  <span>
+                    {formatCurrency(total+shipping_cost)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+           
+          </div>
+
+
         </div>
 
         {/* Fixed Bottom Bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 z-50 shadow-md">
-          {activeStep === "address" && (
-            <Button className="w-full" size="lg" onClick={handleContinueToDelivery}>
-              Continue to Delivery
-            </Button>
-          )}
-
-          {activeStep === "delivery" && (
-            <div className="flex flex-col space-y-2">
-              <div className="flex justify-between text-sm mb-1">
-                <span>Total:</span>
-                 <span className="font-bold">
-                
-                      {formatCurrency(total+shipping_cost)}
-                    
-                    </span>
-              </div>
-              <Button className="w-full" size="lg" onClick={handleContinueToPayment}>
-                Continue to Payment
-              </Button>
-            </div>
-          )}
-
-          {activeStep === "payment" && !orderResponse && (
+          {!orderResponse && (
             <div className="flex flex-col space-y-2">
               <div className="flex justify-between text-sm mb-1">
                 <span>Total:</span>
                 <span className="font-bold">
-               
-                    
-                      {formatCurrency(total+shipping_cost)}
-                    </span>
+                  {formatCurrency(total+shipping_cost)}
+                </span>
               </div>
-              <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={isProcessingOrder}>
-                {isProcessingOrder ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  `Place Order${paymentMethod === "cod" ? " (Cash on Delivery)" : ""}`
-                )}
-              </Button>
+             <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handlePlaceOrder}
+                  disabled={isProcessingOrder}
+                >
+                  {isProcessingOrder ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing Order...
+                    </>
+                  ) : (
+                    paymentMethod === "cod"
+                      ? "Place Order"
+                      : `Continue to Payment (${formatCurrency(total + shipping_cost)})`
+                  )}
+                </Button>
+
             </div>
           )}
         </div>
+
+        {/* Coupon Drawer for Mobile */}
+        <Drawer open={isOpenCoupon} onOpenChange={setIsOpenCoupon}>
+          <DrawerContent>
+            <DrawerHeader className="pb-2">
+              <DrawerTitle>Available Coupons</DrawerTitle>
+              <DrawerDescription>Select a coupon to apply to your order</DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-4">
+              <CouponsContent />
+            </div>
+          </DrawerContent>
+        </Drawer>
       </div>
     )
   }
@@ -1411,43 +1511,6 @@ useEffect(()=>{
         <span>Checkout</span>
       </div>
 
-      {orderResponse && orderResponse.requiresPayment ? (
-        <div className="max-w-2xl mx-auto">
-          <Card className="overflow-hidden">
-            <CardContent className="p-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-                  <CreditCardIcon className="h-8 w-8" />
-                </div>
-                <h2 className="text-2xl font-bold">Complete Your Payment</h2>
-                <p className="text-muted-foreground mt-2">
-                  Your order has been created. Please complete the payment to finalize your purchase.
-                </p>
-
-                <div className="mt-6 p-6 bg-muted/30 rounded-lg">
-                  <p className="font-medium text-lg">Order Total: {formatCurrency(orderResponse.amount / 100)}</p>
-                  <p className="text-muted-foreground">Order ID: {orderResponse.orderId}</p>
-                </div>
-              </div>
-
-              <div className="mt-8">
-                <RazorpayPayment
-                  orderId={orderResponse.orderId}
-                  razorpayOrderId={orderResponse.razorpayOrderId || ""}
-                  amount={orderResponse.amount}
-                  name={userData.name}
-                  onSuccess={handlePaymentSuccess}
-                  onFailure={handlePaymentFailure}
-                />
-
-                <Button variant="outline" className="w-full mt-4" onClick={() => setOrderResponse(null)}>
-                  Cancel Payment
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             {/* Address Section */}
@@ -1779,6 +1842,12 @@ useEffect(()=>{
                   <CreditCard className="h-5 w-5 mr-2" />
                   Payment Method
                 </h2>
+                 <div className="flex items-center mt-4 p-4 rounded-lg bg-muted/30">
+              <Shield className="h-5 w-5 text-muted-foreground mr-3" />
+              <p className="text-sm text-muted-foreground">
+                Your payment information is processed securely. We do not store credit card details.
+              </p>
+            </div>
 
                 <RadioGroup
                   value={paymentMethod}
@@ -1861,34 +1930,63 @@ useEffect(()=>{
                       </div>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <Input
-                          placeholder="Enter coupon code"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
-                        />
+                    <>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Enter coupon code"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
+                          />
+                        </div>
+                        <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon || !couponCode.trim()}>
+                          {isApplyingCoupon ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Applying
+                            </>
+                          ) : (
+                            "Apply"
+                          )}
+                        </Button>
                       </div>
-                      <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon || !couponCode.trim()}>
-                        {isApplyingCoupon ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Applying
-                          </>
-                        ) : (
-                          "Apply"
-                        )}
+                     {couponMessage && (
+                        <div
+                          className={`flex items-start gap-2 mt-2 rounded-lg border p-3 text-sm shadow-sm transition-all
+                            ${
+                              couponMessage.type === "success"
+                                ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300"
+                                : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
+                            }`}
+                        >
+                          {couponMessage.type === "success" ? (
+                            <Check className="h-5 w-5 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                          )}
+
+                          <div className="flex-1">
+                            <p className="font-medium">
+                              {couponMessage.type === "success" ? "Coupon Applied!" : "Coupon Error"}
+                            </p>
+                            <p className="text-sm">{couponMessage.message}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <Button 
+                        variant="outline" 
+                        className="w-full mt-3" 
+                        onClick={() => setIsOpenCoupon(true)}
+                      >
+                        <Ticket className="h-4 w-4 mr-2" />
+                        View Available Coupons
                       </Button>
-                    </div>
+                    </>
                   )}
 
-                  {couponError && (
-                    <div className="mt-2 text-sm text-red-500 flex items-center">
-                      <X className="h-4 w-4 mr-1" />
-                      {couponError}
-                    </div>
-                  )}
+                 
                 </div>
 
                 <div className="flex items-center mt-6 p-4 rounded-lg bg-muted/30">
@@ -1995,16 +2093,25 @@ useEffect(()=>{
                 </div>
 
                 <div className="mt-6">
-                  <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={isProcessingOrder}>
+              <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handlePlaceOrder}
+                    disabled={isProcessingOrder}
+                  >
                     {isProcessingOrder ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Processing Order...
                       </>
                     ) : (
-                      `Place Order${paymentMethod === "cod" ? " (Cash on Delivery)" : ""}`
+                      paymentMethod === "cod"
+                        ? "Place Order"
+                        : `Continue to Payment (${formatCurrency(total + shipping_cost)})`
                     )}
                   </Button>
+
+
 
                   <p className="text-xs text-muted-foreground text-center mt-4">
                     By placing your order, you agree to our{" "}
@@ -2022,7 +2129,18 @@ useEffect(()=>{
             </div>
           </div>
         </div>
-      )}
+    
+
+      {/* Coupon Dialog for Desktop */}
+      <Dialog open={isOpenCoupon} onOpenChange={setIsOpenCoupon}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Available Coupons</DialogTitle>
+            <DialogDescription>Select a coupon to apply to your order</DialogDescription>
+          </DialogHeader>
+          <CouponsContent />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

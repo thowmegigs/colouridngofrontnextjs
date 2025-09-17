@@ -33,7 +33,7 @@ export default function CustomerDashboardContent() {
           </div>
         </Link>
 
-        <Link href="/customer/wishlist" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <Link href="/wishlist" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">
             <div>
               <div className="p-2 bg-pink-100 rounded-lg inline-block">
@@ -73,6 +73,18 @@ export default function CustomerDashboardContent() {
             <ChevronRight size={20} className="text-gray-400" />
           </div>
         </Link>
+        {/* <Link href="/customer/notifications" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="p-2 bg-pink-100 rounded-lg inline-block">
+                <Bell size={24} className="text-pink-600" />
+              </div>
+              <h3 className="text-lg font-medium mt-4">Notifications</h3>
+              <p className="text-gray-500 text-sm mt-1">Stay updated with latest notifications</p>
+            </div>
+            <ChevronRight size={20} className="text-gray-400" />
+          </div>
+        </Link> */}
       </div>
 
      

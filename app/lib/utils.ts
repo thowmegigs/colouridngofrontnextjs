@@ -60,15 +60,15 @@ export const getRandomHexColor = () => {
   return randomHex;
 };
 
-export function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date)
+export function formatDate(dateInput) {
+  const date = new Date(dateInput); // Accepts ISO string or Date object
+  const day = String(date.getDate()).padStart(2, '0');
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
+
+  return `${day} ${month} ${year}`;
 }
 
 export function capitalize(str) {

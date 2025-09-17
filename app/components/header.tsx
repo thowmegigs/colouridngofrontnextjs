@@ -9,9 +9,12 @@ import { useQuery } from "@tanstack/react-query"
 import algoliasearch from "algoliasearch/lite"
 import {
   ArrowLeft,
+  Bell,
   ChevronDown,
+  CreditCard,
   Heart,
   HeartIcon,
+  HelpCircle,
   LogOut,
   MapPin,
   Package,
@@ -127,6 +130,7 @@ export default function Header() {
   const [isHoveringMegaMenu, setIsHoveringMegaMenu] = useState(false)
   const { items: wishlistItems } = useWishlist()
   const [isVisible, setIsVisible] = useState(false);
+  const [isHoveringOther, setIsHoveringOther] = useState(false);
 
   useEffect(() => {
     // Show bar after component mounts
@@ -163,13 +167,31 @@ export default function Header() {
     }
     document.addEventListener("mousedown", handleClickOutside)
    // document.addEventListener("mouseover", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
+    
+     const nav = document.querySelector(".olip");
+
+    if (!nav) return;
+
+    const handleEnter = () => setIsHoveringOther(true);
+  const handleLeave = () => setIsHoveringOther(false);
+    nav.addEventListener("mouseenter", handleEnter);
+    nav.addEventListener("mouseleave", handleLeave);
+    return () => {
+      
+      nav.removeEventListener("mouseenter", handleEnter);
+      nav.removeEventListener("mouseleave", handleLeave);
+     
+    };
   }, [])
 const menuMouseEvent=()=>{
   setIsHoveringMegaMenu(false)
   setIsHoveringMenu(false)
   //setActiveMegaMenu(null)
 }
+useEffect(()=>{
+  console.log('isHoveringOther',isHoveringOther)
+  isHoveringOther && setActiveMegaMenu(null)
+},[isHoveringOther])
   const getPageTitle = () => {
 
     if (pathname === '/') return 'Home'
@@ -194,54 +216,21 @@ const menuMouseEvent=()=>{
   const handlWishlistOpen = useCallback(() => {
     router.push('/wishlist')
   }, [])
-  const handleShowMobilePopup = useCallback(() => {
+  useEffect(()=>{
 
-    setShowMobileSearch(true)
-  }, [])
+  },[
+isHoveringOther
+  ])
+
+   
   return (
     <>
       <header className={`sticky top-0 md:static md:top-auto z-40 w-full transition-all duration-200 ${isScrolled ? "bg-background/95 backdrop-blur-sm shadow-sm" : "bg-background"}`}>
-      
-       {/* <div
-      className={`top-0 left-0 w-full text-white text-center p-2 z-50 shadow-md bg-pink-800 transition-transform duration-500 ${
-        isVisible ? "slide-down" : "-translate-y-full"
-      }`}
-    >
-          <div className="flex justify-center items-center gap-2">
-        <Smartphone size={18}  />
-        <p className="text-sm sm:text-base font-medium">Download the app</p>
-      </div>
-    </div>   */}
-    {/* <div className="bg-primary text-primary-foreground py-2 text-center text-sm">
-              <p>Free shipping on orders over {formatCurrency(500)}</p>
-            </div> */}
-
-        {/* <div className="md:flex md:justify-center border-[#e97f77] border-b-2  bg-red-800 text-white text-sm md:text-md   md:px-10 py-3">
-        
-          <div className="flex items-center justify-between md:gap-6">
-           
-            <div className="block ml-2"><span className="font-bold text-md">For Enquiry: </span></div>
-             
-             <div className="hidden md:flex items-center"><WhatsAppChatButton /><span className=" text-xs"> +919991110716</span></div>
-             <div className="flex items-center"><Phone className="w-3 h-3 mr-1" /><span className="text-xs">+918061561999</span></div>
-            <div className="flex items-center mr-2"><Mail className="w-4 h-4 mr-1" /><span>support@colourindigo.com</span></div>
-
-          </div>
-
-        
-          
-        </div> */}
-
-
-
-        {/* Mobile Header */}
+       {/* Mobile Header */}
         <div
           className="md:hidden"
-        // style={pathname === '/'?{ minHeight:130,color:'white',
-        //   background: 'linear-gradient(to bottom, #990000, #ffffff00)', // dark pink to transparent
-        // }:{}}
-        >
-          <div className="container py-3 flex px-1 items-center justify-between  gap-3">
+         >
+          <div className="container py-3 flex px-3 items-center justify-between  gap-3">
             <div className="flex items-center gap-2">
               {pathname !== '/' ? (
                 <>
@@ -268,8 +257,12 @@ const menuMouseEvent=()=>{
 
                 }
             <div className="flex items-center gap-1">
-              {pathname === '/' &&
-              <WhatsAppChatButton />
+              {pathname === '/' && <div className="flex flex-row gap-3 items-center">
+              <Bell  size={38} onClick={()=>router.push('/notifications')} />
+                 <WhatsAppChatButton />
+              </div>
+              
+             
               }
 
 
@@ -339,8 +332,8 @@ const menuMouseEvent=()=>{
 
         {/* Desktop Header */}
         <div className="hidden md:block">
-          <div className="container py-4 px-0">
-            <div className="flex items-center justify-between">
+          <div className="container py-4 px-0 ">
+            <div className="flex items-center justify-between olip">
               <Link href="/" className="flex items-center">
                 <Image src="/images/logo.png" alt="Colour Indigo" width={150} height={50} className="h-14 w-auto" />
               </Link>
@@ -357,7 +350,7 @@ const menuMouseEvent=()=>{
               </div>
 
 
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-content-end gap-0">
                 <div className="relative" ref={accountRef}>
                   {isAuthenticated ? (
                     <button
@@ -419,6 +412,22 @@ const menuMouseEvent=()=>{
                             <MapPin size={16} /> My Addresses
                           </a>
                         </li>
+                        <li>
+                          <a
+                            href="/customer/payment"
+                            className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <CreditCard size={16} />Payment Methods
+                          </a>
+                        </li>
+                        <li>
+                          <a
+                            href="/customer/help"
+                            className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <HelpCircle size={16} /> Help & Support
+                          </a>
+                        </li>
                        
                         <li>
                           <button
@@ -434,14 +443,20 @@ const menuMouseEvent=()=>{
 
                 </div>
 
-                <Link href="/wishlist" className="flex items-center text-sm font-medium">
-                  <Button variant="ghost" size="icon" className="relative">
+                <Link href="/wishlist" className="p-0 m-0 flex items-center text-sm font-medium">
+                  <Button variant="ghost" size="icon" className="p-0 m-0 relative">
                     <Heart className="h-5 w-5" />
                     {wishlistItems.length > 0 && (
                       <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
                         {wishlistItems.length}
                       </span>
                     )}
+                  </Button>
+                </Link>
+                <Link href="/notifications" className="text-sm font-medium">
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    
                   </Button>
                 </Link>
 

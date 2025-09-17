@@ -146,7 +146,7 @@ export function ReviewForm({ productId, onSuccess, onCancel }: ReviewFormProps) 
 
       showSuccess(newReview['message'])
    
-
+onSuccess(newReview)
       // onSuccess(newReview)
     } catch (error: any) {
       console.log('giot erro', error.message)
@@ -159,7 +159,7 @@ export function ReviewForm({ productId, onSuccess, onCancel }: ReviewFormProps) 
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} >
 
 
         <FormField

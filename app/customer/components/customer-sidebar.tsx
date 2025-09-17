@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/app/providers/auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowLeft, CreditCard, LayoutDashboard, LogOut, MapPin, ShoppingBag, User } from "lucide-react"
+import { ArrowLeft, CreditCard, HelpCircle, LayoutDashboard, LogOut, MapPin, ShoppingBag, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type React from "react"
@@ -48,6 +48,11 @@ const {user}=useAuth()
       title: "Profile",
       path: "/customer/profile",
       icon: <User size={20} />,
+    },
+    {
+      title: "Help & Supprot",
+      path: "/customer/help",
+      icon: <HelpCircle  size={20} />,
     },
   ]
 

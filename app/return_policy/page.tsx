@@ -1,7 +1,15 @@
-import { CreditCard, FileText, RotateCcw, Truck } from "lucide-react"
+'use client';
+import { fetchSetting } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { CreditCard, FileText, RotateCcw, Truck } from "lucide-react";
 
 
 export default function ReturnsPage() {
+   const { data: setting } = useQuery<any>({
+    queryKey: ["setting"],
+    queryFn: () => fetchSetting(),
+  
+  })
   return (
     <div className="container py-12">
       <div className="max-w-4xl mx-auto">
@@ -19,7 +27,7 @@ export default function ReturnsPage() {
             </div>
             <h3 className="font-medium mb-2">Easy Returns</h3>
             <p className="text-sm text-muted-foreground">
-              Return eligible items within 2 days of delivery for a full refund.
+              Return eligible items within {setting?.return_days??3} days of delivery for a full refund.
             </p>
           </div>
 
@@ -57,10 +65,10 @@ export default function ReturnsPage() {
 
       <ul className="list-disc pl-6 space-y-2 text-gray-700 text-base">
         <li>
-          We have a <span className="font-medium">2-day return policy</span>, which means you have 2 days after receiving your item to request a return.
+          We have a <span className="font-medium">{setting?.return_days??3}-day return policy</span>, which means you have {setting?.return_days??3} days after receiving your item to request a return.
         </li>
         <li>
-          Once the returned product is received, it will be inspected and the return will be approved within 2 days.
+          Once the returned product is received, it will be inspected and the return will be approved within {setting?.return_days??3} days.
         </li>
         <li>
           We will notify you once we’ve received and inspected your return, and let you know if the refund was approved or not.

@@ -5,6 +5,7 @@ import { formatCurrency } from "@/app/lib/utils"
 import { Button } from "@/components/ui/button"
 import { image_base_url } from "@/contant"
 import { apiRequest, decryptId } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
 import { AlertCircle, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -144,7 +145,7 @@ export default function OrderSuccessPage() {
 
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Date</h3>
-                <p>{new Date(order.created_at).toLocaleDateString()}</p>
+                <p>{formatDate(order.created_at)}</p>
               </div>
 
               <div>

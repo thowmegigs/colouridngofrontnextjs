@@ -22,7 +22,7 @@ export default async function Home() {
   })
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="space-y-2 pb-12 px-2 md:px-0">
+      <div className="space-y-1  px-2 md:px-0">
         {/* <div className="md:px-9">
           <HeroSlider />
         </div>

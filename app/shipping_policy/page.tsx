@@ -25,7 +25,7 @@ export default function ShippingPolicyPage() {
                 {/* Section 1: User Account */}
                 <Section title="Processing Time">
                     <p className="mb-4">
-                        All orders are delivered within 2-3 business days. Orders are not shipped or delivered on weekends or holidays. If we are experiencing a high volume of orders, shipments may be delayed by a few days. Please allow additional days in transit for delivery. If there will be a significant delay in the shipment of your order,
+                        All orders are delivered within 3-7 business days. Orders are not shipped or delivered on weekends or holidays. If we are experiencing a high volume of orders, shipments may be delayed by a few days. Please allow additional days in transit for delivery. If there will be a significant delay in the shipment of your order,
                         we will contact you via email or phone.
 
                     </p>
@@ -33,7 +33,7 @@ export default function ShippingPolicyPage() {
                 </Section>
                 <Section title="Shipping Time Domestic Shipping">
                     <p className="mb-4">
-                        Orders will be delivered within 2-3 business days from the date of order confirmation. Please note that delivery times may be affected by factors beyond our control, such as weather conditions, customs delays, and other unforeseen circumstances
+                        Orders will be delivered within 3-7 business days from the date of order confirmation. Please note that delivery times may be affected by factors beyond our control, such as weather conditions, customs delays, and other unforeseen circumstances
 
 
                     </p>

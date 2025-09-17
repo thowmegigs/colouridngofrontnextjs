@@ -1,6 +1,8 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import { image_base_url } from "@/contant"
+import { fetchSetting } from "@/lib/api"
+import { useQuery } from "@tanstack/react-query"
 import { Minus, Plus, RotateCcw, ShoppingBag, X } from "lucide-react"
 import Link from "next/link"
 import { formatCurrency } from "../lib/utils"
@@ -9,7 +11,11 @@ import SafeImage from "./SafeImage"
 
 export default function CartDrawer() {
   const { items, removeItem, updateQuantity, isOpen, setIsOpen, subtotal, discount, total } = useCart()
-
+  const { data: setting } = useQuery<any>({
+    queryKey: ["setting"],
+    queryFn: () => fetchSetting(),
+  
+  })
   if (!isOpen) return null
 
   return (
@@ -44,17 +50,20 @@ export default function CartDrawer() {
                 {items.map((item) => (
                   <li key={item.variantId ?? item.id} className="gap-2 flex border  rounded-lg overflow-hidden">
                     <div className="w-[115px] h-24  ">
-                      <SafeImage
-                        fallbackSrc="/placeholder.png"
-                        src={item.variantId && item.color
-                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/tiny_${item.image}`
-                          : `${image_base_url}/storage/products/${item.id}/thumbnail/tiny_${item.image}`
-                        }
-                        alt={item.name}
-                        width={64}
-                        height={64}
-                        className="rounded-md m-1 ml-3 mt-4 w-full h-[165px] rounded-md object-fit"
-                      />
+                      <Link href={`/product/${item.slug}`}>
+                        <SafeImage
+                          fallbackSrc="/placeholder.png"
+                          src={item.variantId && item.color
+                            ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/tiny_${item.image}`
+                            : `${image_base_url}/storage/products/${item.id}/thumbnail/tiny_${item.image}`
+                          }
+                          alt={item.name}
+                          width={64}
+                          height={64}
+                          className="rounded-md m-1 ml-3 mt-4 w-full h-[165px] rounded-md object-fit"
+                        />
+                      </Link>
+
                     </div>
 
                     <div className="flex-1 flex flex-col p-3">
@@ -85,7 +94,7 @@ export default function CartDrawer() {
                           {item.isReturnable &&
                             <div className="flex items-center space-x-2 my-2 text-sm  font-medium">
                               <RotateCcw className="w-4 h-4" />
-                              <span><span className="font-extrabold">2 days</span> return available</span>
+                              <span><span className="font-extrabold">{setting?.return_days??3} days</span> return available</span>
                             </div>
                           }
                         </div>

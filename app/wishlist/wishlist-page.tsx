@@ -76,7 +76,7 @@ export default function WishlistPage() {
                           {item.name}
                         </h3>
                       </Link>
-                      <div className="flex gap-2 mb-2 h-[30px]">
+                      {/* <div className="flex gap-2 mb-2 h-[30px]">
                         {(item.color || item.size) && (
                           <>
                             {item.color && (
@@ -87,8 +87,8 @@ export default function WishlistPage() {
                             )}
                           </>
                         )}
-                      </div>
-                      <div className="flex items-center mb-3">
+                      </div> */}
+                      <div className="flex items-center mb-1">
                         <span className="font-medium text-sm">{formatCurrency(item.sale_price)}</span>
                         <span className="text-sm text-muted-foreground line-through ml-2">
                           {formatCurrency(item.price)}

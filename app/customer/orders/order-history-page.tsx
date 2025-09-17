@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { image_base_url } from "@/contant"
 import { fetchOrders } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
-import { AlertCircle, CheckCircle, ChevronRight, Clock, Package, Truck } from "lucide-react"
+import { AlertCircle, CheckCircle, Clock, Package, Truck } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -45,17 +45,10 @@ const { data: orders, isLoading, isError } = useQuery({
   if (isLoading) return <LoadingSpinner/>;
   if (isError) return <ErrorPage/>;
   return (
-    <div className="container py-8">
-      <div className="hidden md:flex items-center mb-8">
-        <Link href="/customer/dashboard" className="text-muted-foreground hover:text-foreground">
-          Dashboard
-        </Link>
-        <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
-        <span>Order History</span>
-      </div>
-
+    <div className="container ">
+     
       <div className="hidden md:flex flex-col md:flex-row justify-between mb-6 gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">Order History</h1>
+        <h1 className="text-2xl  font-bold">Order History</h1>
 
       
       </div>
@@ -85,14 +78,17 @@ const { data: orders, isLoading, isError } = useQuery({
                       key={order.id}
                       className="border rounded-lg overflow-hidden bg-white shadow hover:border-primary transition-colors"
                     >
-                      <div className="p-4 border-b bg-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="p-4 border-b bg-muted/30 flex flex-wrap flex-row sm:items-center justify-between gap-2">
                         <div>
-                          <div className="font-medium">Order #{order.id}</div>
+                          <div className="font-medium">#{order.id} {order.status==='CANCELLED' &&
+                          <span className="text-red-500 text-sm font-bold">(CANCELLED)</span> }</div>
                           <div className="text-sm text-muted-foreground">
-                            {formatDate(order.date)}
-                          </div>
+                            {formatDate(order.date)} 
+                          </div> 
+                        
                         </div>
-                       <div className="flex items-center justify-end">
+                       <div className="flex items-start justify-end">
+                          
                            
                             <Link href={`/customer/orders/${order.id}`}>
                               <Button size="sm">Show Details</Button>

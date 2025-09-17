@@ -1,42 +1,23 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog"
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle
-} from "@/components/ui/drawer"
-import { Input } from "@/components/ui/input"
 import { image_base_url } from "@/contant"
 import { useMobile } from "@/hooks/use-mobile"
-import { fetchAvailableCoupons, type Coupon } from "@/lib/api"
+import { fetchSetting } from "@/lib/api"
+import { useQuery } from "@tanstack/react-query"
 import {
   AlertCircle,
-  Check,
   ChevronRight,
-  Loader2,
   Minus,
   Plus,
   RotateCcw,
-  Search,
   ShoppingCart,
-  Tag,
   X
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback } from "react"
 import SafeImage from "../components/SafeImage"
-import { showToast } from "../components/show-toast"
 import { formatCurrency } from "../lib/utils"
 import { useAuth } from "../providers/auth-provider"
 import { useCart } from "../providers/cart-provider"
@@ -51,22 +32,14 @@ export default function CartPage() {
     subtotal,
     discount,
     total,
-    appliedCoupon,
-    applyCoupon,
-    removeCoupon,
-    isCouponLoading,
-    couponError, shipping_cost
+    shipping_cost
   } = useCart()
 
-  const [couponCode, setCouponCode] = useState("")
-
-  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
-  const [isLoadingCoupons, setIsLoadingCoupons] = useState(false)
-  const [couponMessage, setCouponMessage] = useState<{ type: "success" | "error"; message: string } | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const [pendingCouponCode, setPendingCouponCode] = useState<string | null>(null)
-  const [isOpenCoupon, setIsOpenCoupon] = useState(false);
+ const { data: setting } = useQuery<any>({
+    queryKey: ["setting"],
+    queryFn: () => fetchSetting(),
+  
+  })
   const { isAuthenticated } = useAuth()
 
 
@@ -75,114 +48,15 @@ export default function CartPage() {
 
 
 
-  // Fetch available coupons when the dialog/drawer is opened
-  useEffect(() => {
-    if (isOpenCoupon) {
-      const loadCoupons = async () => {
-        setIsLoadingCoupons(true)
-        try {
-          const coupons = await fetchAvailableCoupons()
-          console.log('coiupons', coupons)
-          setAvailableCoupons(coupons)
-        } catch (error) {
-          console.error("Error fetching coupons:", error)
-          showToast({
-            title: "Error", description: "Failed to load available coupons",
-            variant: 'destructive'
-          })
-        } finally {
-          setIsLoadingCoupons(false)
-        }
-      }
-
-      loadCoupons()
-    }
-  }, [isOpenCoupon, showToast])
-
-  // Filter coupons based on search query
-  const filteredCoupons = useMemo(() => {
-    if (!searchQuery.trim()) return availableCoupons
-
-    const query = searchQuery.toLowerCase().trim()
-    return availableCoupons.filter(
-      (coupon) =>
-        coupon.code.toLowerCase().includes(query) ||
-        coupon.description?.toLowerCase().includes(query) ||
-        (coupon.discount_type === "Percent" && `${coupon.discount}%`.includes(query)) ||
-        (coupon.discount_type === "Flat" && `$${coupon.discount}`.includes(query)),
-    )
-  }, [availableCoupons, searchQuery])
-
-  const handleApplyCouponWithAuth = async (code: string) => {
-    if (!isAuthenticated) {
-      // Save the coupon code and open auth modal
-      router.push(`auth/login?redirect=/cart`)
-    }
-
-    // User is logged in, proceed with applying coupon
-    await processCouponApplication(code)
+ 
+  const handleCheckoutClick = useCallback(() => {
+    console.log('isAuthenticated', isAuthenticated)
+  if (isAuthenticated) {
+    router.push("/checkout");
+  } else {
+    router.push("auth/login?redirect=/checkout");
   }
-
-  const processCouponApplication = async (code: string) => {
-    if (!code) {
-      setCouponMessage({
-        type: "error",
-        message: "Please enter a coupon code",
-      })
-      return
-    }
-    try {
-      const result = await applyCoupon(code)
-      console.log('result', result)
-      setCouponMessage({
-        type: "success",
-        message: result.message,
-      })
-      setCouponCode("")
-      setIsOpenCoupon(false)
-
-      showToast({
-        title: "Coupon Applied", description: result.message as any
-      })
-    }
-
-    catch (err) {
-      setIsOpenCoupon(false)
-      console.log('lo err', err)
-      setCouponMessage({
-        type: "error",
-        message: err.message,
-      })
-
-    }
-
-    // Clear message after 5 seconds
-    setTimeout(() => {
-      setCouponMessage(null)
-    }, 5000)
-  }
-
-  const handleRemoveCoupon = async () => {
-    const result = await removeCoupon()
-
-    if (result.success) {
-      showToast({
-        title: "Coupon Removed", description: "Coupon has been removed from your cart"
-      })
-    }
-  }
-
-
-  const handleCheckoutClick = () => {
-
-    if (isAuthenticated) {
-      // User is logged in, proceed to checkout
-      router.push("/checkout")
-    } else {
-      // User is not logged in, redirect to auth page
-      router.push('auth/login?redirect=/checkout')
-    }
-  }
+}, [isAuthenticated, router]);
 
   if (items.length === 0) {
     return (
@@ -201,134 +75,6 @@ export default function CartPage() {
     )
   }
 
-  const CouponsContent = () => (
-    <div className="space-y-4">
-      {isLoadingCoupons ? (
-        <div className="flex justify-center items-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading available coupons...</span>
-        </div>
-      ) : (
-        <>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search coupons..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Clear search</span>
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-            {filteredCoupons && filteredCoupons.length > 0 ? (
-              filteredCoupons.map((coupon) => (
-                <div key={coupon.code} className="border rounded-lg p-4 hover:border-primary transition-colors">
-                  <div className="flex flex-col space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium text-primary">{coupon.code}</div>
-                        <div className="text-sm text-muted-foreground">{coupon.description}</div>
-                      </div>
-                      <div className="text-lg font-bold text-primary">
-                        {coupon.discount_type === "Percent"
-                          ? `${coupon.discount}%`
-                          : `$${coupon.discount.toFixed(2)}`}
-                      </div>
-                    </div>
-
-                    <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-                      <span>Min. order: ${coupon.cart_amount.toFixed(2)}</span>
-                      <span>Expires: {new Date(coupon.end_date).toLocaleDateString()}</span>
-                      {coupon.max_discount && (
-                        <span>Max discount: ${coupon.max_discount.toFixed(2)}</span>
-                      )}
-                    </div>
-
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(coupon.code)
-                          showToast({
-                            title: "Copied!",
-                            description: `Coupon code ${coupon.code} copied to clipboard`,
-
-                          })
-                        }}
-                        className="w-full sm:w-auto"
-                      >
-                        Copy
-                      </Button>
-                      <Button onClick={() => handleApplyCouponWithAuth(coupon.code)} className="w-full sm:w-auto">
-                        Apply
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-6">
-                <Search className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                <p className="font-medium">No matching coupons found</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Try a different search term or browse all available coupons.
-                </p>
-                {searchQuery && (
-                  <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
-                    Clear Search
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2 pt-3 border-t">
-            <Input
-              placeholder="Enter coupon code"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleApplyCouponWithAuth(couponCode)}
-            />
-            <Button onClick={() => handleApplyCouponWithAuth(couponCode)} disabled={isCouponLoading}>
-              {isCouponLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Applying...
-                </>
-              ) : (
-                "Apply"
-              )}
-            </Button>
-          </div>
-
-          {couponMessage && (
-            <div
-              className={`text-sm flex items-center ${couponMessage.type === "success" ? "text-green-600" : "text-destructive"
-                }`}
-            >
-              {couponMessage.type === "success" ? (
-                <Check className="h-4 w-4 mr-1" />
-              ) : (
-                <AlertCircle className="h-4 w-4 mr-1" />
-              )}
-              {couponMessage.message}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  )
-
   // Mobile Android-style cart
   if (isMobile) {
     return (
@@ -342,7 +88,7 @@ export default function CartPage() {
         </div>
 
         {/* Applied coupon notification */}
-       
+
 
         {/* Cart items */}
         <div className="divide-y">
@@ -350,17 +96,19 @@ export default function CartPage() {
             <div key={item.variantId ?? item.id} className="px-4 py-3 bg-white dark:bg-gray-950 flex items-center">
               {/* Product image */}
               <div className="w-[110px] h-full rounded overflow-hidden flex-shrink-0 mr-3 bg-gray-100 dark:bg-gray-800">
-                <SafeImage
-                  fallbackSrc="/placeholder.png"
-                  src={item.variantId && item.color
-                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/small_${item.image}`
-                          : `${image_base_url}/storage/products/${item.id}/thumbnail/small_${item.image}`
+                <Link href={`/product/${item.slug}`}>
+                  <SafeImage
+                    fallbackSrc="/placeholder.png"
+                    src={item.variantId && item.color
+                      ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/small_${item.image}`
+                      : `${image_base_url}/storage/products/${item.id}/thumbnail/small_${item.image}`
                     }
-                  alt={item.name}
-                  width={64}
-                  height={64}
-                  className="w-full h-[170px] object-fit"
-                />
+                    alt={item.name}
+                    width={64}
+                    height={64}
+                    className="w-full h-[170px] object-fit"
+                  /></Link>
+
               </div>
 
               {/* Product details */}
@@ -386,7 +134,7 @@ export default function CartPage() {
                 {item.isReturnable &&
                   <div className="flex items-center space-x-2 my-2 text-sm  font-medium">
                     <RotateCcw className="w-4 h-4" />
-                    <span><span className="font-extrabold">2 days</span> return available</span>
+                    <span><span className="font-extrabold">{setting?.return_days??3} days</span> return available</span>
                   </div>
                 }
                 <div className="flex items-center justify-between mt-2">
@@ -423,94 +171,16 @@ export default function CartPage() {
           ))}
         </div>
 
-        {/* Coupon section */}
-        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900">
-          {appliedCoupon ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Tag className="h-4 w-4 mr-2 text-primary" />
-                <div>
-                  <span className="text-sm font-medium">{appliedCoupon.code}</span>
-                  {appliedCoupon.details && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{appliedCoupon.details.description}</p>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRemoveCoupon}
-                disabled={isCouponLoading}
-                className="h-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-              >
-                {isCouponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                <span className="sr-only">Remove coupon</span>
-              </Button>
-            </div>
-          ) : (
-            <div className="flex">
-              <Input
-                placeholder="Enter coupon code"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                className="rounded-r-none h-10 text-sm"
-                disabled={isCouponLoading}
-              />
-              <Button
-                className="rounded-l-none h-10"
-                onClick={() => handleApplyCouponWithAuth(couponCode)}
-                disabled={isCouponLoading}
-              >
-                {isCouponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
-              </Button>
-            </div>
-          )}
-           {couponError && (
-                      <div className="mt-2 text-sm text-destructive flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {couponError}
-                      </div>
-                    )}
-                   {appliedCoupon && (
-          <div className="bg-green-50 dark:bg-green-900/20  mt-2 py-2 flex items-center text-green-700 dark:text-green-400 text-sm">
-            <Check className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span>
-              <span className="font-medium">{appliedCoupon.code}</span> applied
-              {discount > 0 && ` (${formatCurrency(discount)} off)`}
-            </span>
-          </div>
-        )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full mt-2 text-sm h-9"
-            onClick={() => setIsOpenCoupon(true)}
-          >
-            <Tag className="h-3.5 w-3.5 mr-1.5" />
-            View Available Coupons
-          </Button>
-          <Drawer open={isOpenCoupon} onOpenChange={setIsOpenCoupon}>
-            <DrawerContent>
-              <DrawerHeader className="pb-2">
-                <DrawerTitle>Available Coupons</DrawerTitle>
-                <DrawerDescription>Select a coupon to apply to your order</DrawerDescription>
-              </DrawerHeader>
-              <div className="px-4 pb-4">
-                <CouponsContent />
-              </div>
-            </DrawerContent>
-          </Drawer>
-        </div>
-
+      
         {/* Order summary collapsible */}
         <div className="px-4 py-3 border-t border-b">
-          <button
+          <Button
             className="w-full flex items-center justify-between"
           // onClick={() => setShowOrderSummary(!showOrderSummary)}
           >
             <span className="font-medium">Order Summary</span>
             {/* <ChevronDown className={`h-5 w-5 transition-transform ${showOrderSummary ? "rotate-180" : ""}`} /> */}
-          </button>
+          </Button>
 
 
           <div className="pt-3 space-y-2 text-sm">
@@ -568,32 +238,6 @@ export default function CartPage() {
         </button>
       </div>
 
-      {appliedCoupon && (
-        <div className="bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-lg p-4 mb-6 flex items-start">
-          <Check className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">Discount applied!</p>
-            <p className="text-sm">
-              Coupon code <span className="font-medium">{appliedCoupon.code}</span> has been applied to your cart.
-              {discount > 0 && ` You saved ${formatCurrency(discount)}.`}
-            </p>
-            {appliedCoupon.details && (
-              <p className="text-xs mt-1 text-green-700 dark:text-green-400">{appliedCoupon.details.description}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {couponError && !appliedCoupon && (
-        <div className="bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-lg p-4 mb-6 flex items-start">
-          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">Coupon Error</p>
-            <p className="text-sm">{couponError}</p>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <div className="border rounded-lg overflow-hidden">
@@ -604,17 +248,18 @@ export default function CartPage() {
                 <li key={item.variantId ?? item.id} className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row">
                     <div className="sm:w-24 sm:h-24 mb-4 sm:mb-0 sm:mr-6 flex-shrink-0">
-                      <SafeImage
-                        fallbackSrc="/placeholder.png"
-                       src={item.variantId && item.color
-                          ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/small_${item.image}`
-                          : `${image_base_url}/storage/products/${item.id}/thumbnail/small_${item.image}`
-                    }
-                        alt={item.name}
-                        width={150}
-                        height={250}
-                        className="w-full h-auto object-fit"
-                      />
+                      <Link href={`/product/${item.slug}`}>
+                        <SafeImage
+                          fallbackSrc="/placeholder.png"
+                          src={item.variantId && item.color
+                            ? `${image_base_url}/storage/products/${item.id}/variants/thumbnail/small_${item.image}`
+                            : `${image_base_url}/storage/products/${item.id}/thumbnail/small_${item.image}`
+                          }
+                          alt={item.name}
+                          width={150}
+                          height={250}
+                          className="w-full h-auto object-fit"
+                        /></Link>
                     </div>
 
                     <div className="flex-1">
@@ -715,72 +360,7 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                {appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
-                    <div className="flex items-center">
-                      <Tag className="h-4 w-4 mr-2 text-primary" />
-                      <div>
-                        <span className="text-sm font-medium">{appliedCoupon.code}</span>
-                        {appliedCoupon.details && (
-                          <p className="text-xs text-muted-foreground">{appliedCoupon.details.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRemoveCoupon}
-                      disabled={isCouponLoading}
-                      className="h-8 text-muted-foreground hover:text-foreground"
-                    >
-                      {isCouponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                      <span className="sr-only">Remove coupon</span>
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex">
-                      <Input
-                        placeholder="Enter coupon code"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        className="rounded-r-none"
-                        disabled={isCouponLoading}
-                        onKeyDown={(e) => e.key === "Enter" && handleApplyCouponWithAuth(couponCode)}
-                      />
-                      <Button
-                        className="rounded-l-none"
-                        onClick={() => handleApplyCouponWithAuth(couponCode)}
-                        disabled={isCouponLoading}
-                      >
-                        {isCouponLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Apply"}
-                      </Button>
-                    </div>
-
-                    {couponError && (
-                      <div className="text-sm text-destructive flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {couponError}
-                      </div>
-                    )}
-                    <Button variant="outline" className="w-full" onClick={() => setIsOpenCoupon(true)}>
-                      <Tag className="h-4 w-4 mr-2" />
-                      View Available Coupons
-                    </Button>
-                    <Dialog open={isOpenCoupon} onOpenChange={setIsOpenCoupon} >
-
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Available Coupons</DialogTitle>
-                          <DialogDescription>Select a coupon to apply to your order</DialogDescription>
-                        </DialogHeader>
-                        <CouponsContent />
-                      </DialogContent>
-                    </Dialog>
-                  </>
-                )}
-              </div>
+             
 
               <Button className="w-full" onClick={handleCheckoutClick}>
                 Proceed to Checkout
