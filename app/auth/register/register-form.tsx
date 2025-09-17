@@ -47,10 +47,31 @@ export default function RegisterForm() {
     return () => clearInterval(interval)
   }, [step, resendCooldown])
 
+  const validateEmail = (email: string) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+const validatePhone = (phone: string) => {
+  if (!phone) return false
+  if (phone.includes("+")) return false // ❌ reject +91 or + prefix
+  const digitsOnly = phone.replace(/[^0-9]/g, "")
+  return /^\d{10}$/.test(digitsOnly)
+}
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name || !email || !phone) return setError("Fill all required fields.")
     if (!agree) return setError("You must agree to the terms before continuing.")
+       // ✅ Email validation
+  if (!validateEmail(email)) {
+    return setError("Invalid email address.")
+  }
+
+  // ✅ Phone validation
+  if (!validatePhone(phone)) {
+    return setError("Phone number must be exactly 10 digits and without country code ")
+  }
 
     try {
       const response = await apiRequest(`auth/emailExist`, {

@@ -326,6 +326,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
         price: Number.parseFloat(selectedVariant.price),
         image: selectedVariant.image || product.image,
         quantity,
+        sku:selectedVariant?selectedVariant.sku:product.sku,
         stock: selectedVariant.quantity,
         color: selectedVariant.parsedColor
           ? selectedVariant.parsedColor.charAt(0).toUpperCase() + selectedVariant.parsedColor.slice(1)
@@ -356,6 +357,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
         image: product.image,
         quantity, stock: product.quantity,
         vendorId: product.vendor_id,
+         sku:product.sku,
         vendorName: product.vendor_name,
         discountMessage: Number.parseFloat(product.discount) > 0 ? `${Math.round(product.discount)}% OFF` : undefined,
         maxQuantityAllowed: product.max_quantity_allowed,
@@ -392,6 +394,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
         price: Number.parseFloat(selectedVariant.price),
         image: selectedVariant.image || product.image,
         quantity,
+        sku:selectedVariant?selectedVariant.sku:product.sku,
         stock: selectedVariant.quantity,
         color: selectedVariant.parsedColor
           ? selectedVariant.parsedColor.charAt(0).toUpperCase() + selectedVariant.parsedColor.slice(1)
@@ -418,6 +421,7 @@ export default function ProductDetail({ slug }: ProductDetailProps) {
         image: product.image,
         quantity, stock: product.quantity,
         vendorId: product.vendor_id,
+         sku:product.sku,
         vendorName: product.vendor_name,
         discountMessage: Number.parseFloat(product.discount) > 0 ? `${Math.round(product.discount)}% OFF` : undefined,
         maxQuantityAllowed: product.max_quantity_allowed,

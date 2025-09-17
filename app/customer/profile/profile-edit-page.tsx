@@ -65,7 +65,20 @@ export default function ProfileEditPage() {
     const isNameChanged = old_name !== formData.name
 
     if (!isPhoneChanged && !isEmailChanged && !isNameChanged) return
+     if (!formData.name.trim()) {
+    setErrorMessage("Name is required")
+    return
+  }
 
+    if (isEmailChanged && !validateEmail(formData.email)) {
+      setErrorMessage("Invalid email address")
+      return
+    }
+
+    if (isPhoneChanged && !validatePhone(formData.phone)) {
+      setErrorMessage("Phone number must be exactly 10 digits and without country code ")
+      return
+    }
     setSendingOtp(true)
     try {
       if (isPhoneChanged) {
@@ -95,6 +108,17 @@ export default function ProfileEditPage() {
       setSendingOtp(false)
     }
   }
+  const validateEmail = (email: string) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+const validatePhone = (phone: string) => {
+  if (!phone) return false
+  if (phone.includes("+")) return false // ❌ reject +91 or +
+  const digitsOnly = phone.replace(/[^0-9]/g, "")
+  return /^\d{10}$/.test(digitsOnly)
+}
 
   const handleVerifyOtpAndSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()

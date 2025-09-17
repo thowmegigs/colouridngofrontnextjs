@@ -48,6 +48,7 @@ export type CartItem = {
   image: string;
   quantity: number;
   stock: number;
+  sku: string;
   maxQuantityAllowed: number;
   size?: string;
   color?: string;

@@ -38,7 +38,7 @@ export default function OrderDetailPage({ orderId }: { orderId: string }) {
   if (error) return <ErrorPage />
 
   const cancellableStatuses = ['ORDERED', "APPROVED"]
-  const canCancelOrder = cancellableStatuses.includes(order.delivery_status.toUpperCase())
+  const canCancelOrder =order.canBeCancelled
 
   const cancelOrder = async () => {
     try {
@@ -98,8 +98,7 @@ export default function OrderDetailPage({ orderId }: { orderId: string }) {
                     const statuses = JSON.parse(item.delivery_status_updates)
                     
 
-                    const isReturnActive =
-                      (!item.return_status && item.delivery_status.includes("DELIVERED")) &&
+                    const isReturnActive =item.delivery_status.includes("DELIVERED") &&
                       isReturnWindowActive(item.delivered_date,setting.return_days??3)
 
                     const isReturnEligible =
